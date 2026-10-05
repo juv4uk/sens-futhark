@@ -1,0 +1,88 @@
+{
+  "schema": "sens-packed-domain-witness/v1",
+  "source": "tests/packed-ir-vectors.json",
+  "positive": [
+    {
+      "id": "canonical-10-001-01",
+      "source_words": [
+        "10",
+        "001",
+        "01"
+      ],
+      "packed_bytes": [
+        138
+      ],
+      "bit_len": 7
+    },
+    {
+      "id": "same-value-different-widths",
+      "source_words": [
+        "1",
+        "01",
+        "001",
+        "0001"
+      ],
+      "packed_bytes": [
+        164,
+        64
+      ],
+      "bit_len": 10
+    },
+    {
+      "id": "cross-byte-word",
+      "source_words": [
+        "1111111",
+        "101"
+      ],
+      "packed_bytes": [
+        255,
+        64
+      ],
+      "bit_len": 10
+    },
+    {
+      "id": "all-widths-dense",
+      "source_words": [
+        "1",
+        "10",
+        "101",
+        "1010",
+        "10101",
+        "101010",
+        "1010101",
+        "10101010"
+      ],
+      "packed_bytes": [
+        214,
+        171,
+        85,
+        90,
+        160
+      ],
+      "bit_len": 36
+    }
+  ],
+  "negative": [
+    {
+      "id": "d8-current-admission",
+      "width": 8,
+      "expected": "reject-domain"
+    },
+    {
+      "id": "nonzero-tail",
+      "packed_bytes": [
+        139
+      ],
+      "bit_len": 7,
+      "width": 7,
+      "expected": "reject"
+    },
+    {
+      "id": "out-of-range",
+      "bit_len": 7,
+      "offset": 5,
+      "width": 3,
+      "expected": "reject"
+    }
+  ]
+}
