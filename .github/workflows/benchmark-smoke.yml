@@ -49,10 +49,20 @@ jobs:
             --out bench/results/run
           python3 bench/summarize.py bench/results/run | tee bench/results/run/summary.txt
 
+      - name: Run CUDA C-API phase probe
+        env:
+          FUTHARK: ${{ github.workspace }}/.tools/bin/futhark
+          CUDA_HOME: /usr/local/cuda-12.6
+        run: |
+          python3 bench/transfer_probe.py \
+            --sizes "${{ inputs.sizes }}" \
+            --repeats "${{ inputs.runs }}" \
+            --out bench/results/run
+
       - name: Show benchmark summary
         if: always()
         run: |
-          for f in metadata.json summary.json summary.txt; do
+          for f in metadata.json summary.json summary.txt transfer_summary.json transfer_raw.csv; do
             if [ -f "bench/results/run/$f" ]; then
               echo "===== $f ====="
               cat "bench/results/run/$f"
