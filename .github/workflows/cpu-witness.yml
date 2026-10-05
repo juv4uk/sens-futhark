@@ -5,10 +5,17 @@ on:
     branches: [main]
   pull_request:
 
+# Keep only the newest witness for a ref; stale revisions must not occupy the
+# single self-hosted execution lane.
+concurrency:
+  group: sens-futhark-cpu-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   cpu-reference:
     name: CPU reference witness
     runs-on: [self-hosted, Linux, X64, sens-futhark]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
