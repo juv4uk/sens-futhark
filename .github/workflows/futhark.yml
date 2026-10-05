@@ -38,11 +38,6 @@ jobs:
         run: |
           set -euo pipefail
           echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
-      - uses: actions/upload-artifact@v4
-        with:
-          name: futhark-archive-${{ github.sha }}
-          path: ${{ runner.temp }}/futhark/futhark.tar.xz
-          if-no-files-found: error
 
   toolchain-binary:
     name: Futhark archive extraction and version
