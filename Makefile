@@ -37,6 +37,7 @@ import-fixture:
 
 witness-cpu:
 	@test -f "$(FIXTURE_DESTINATION)/identity_vectors.csv" || { echo "Imported fixture missing; run make import-fixture SENS_FIXTURE_SOURCE=/path/to/sens-bundle first." >&2; exit 2; }
+	@python3 -c 'import json; m=json.load(open("$(FIXTURE_DESTINATION)/manifest.json", encoding="utf-8")); print("(provenance (source {}) (commit {}) (contract {}) (sha256 {}))".format(m["source_repository"], m["source_commit"], m["contract_version"], m["payload_sha256"]))'
 	python3 "$(CPU_WITNESS)" --fixture "$(FIXTURE_DESTINATION)/identity_vectors.csv"
 
 witness-parity:
