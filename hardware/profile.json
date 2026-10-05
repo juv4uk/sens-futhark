@@ -8,6 +8,11 @@
   "reserved_bytes": 1073741824,
   "bandwidth_bytes_per_s": 112000000000,
   "node_bytes": 24,
+  "packing": "aos",
+  "packing_modes": {
+    "aos": 24,
+    "soa": 21
+  },
   "tdr_ms": 2000,
   "display_class": true
 }
