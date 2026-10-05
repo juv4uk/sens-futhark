@@ -147,10 +147,7 @@ int main(int argc, char **argv) {
     run_phase(ctx, domains, bits, host_out, n, rep, true);
   }
 
-  if (futhark_context_free(ctx) != 0) {
-    fprintf(stderr, "failed to free Futhark context\n");
-    return 3;
-  }
+  futhark_context_free(ctx);
   futhark_context_config_free(cfg);
   free(domains);
   free(bits);
