@@ -64,10 +64,19 @@ def main() -> int:
             }
         )
 
+    first_sustained_cuda_win = None
+    for i, row in enumerate(rows):
+        if row["cuda_over_c_speedup"] > 1.0 and all(
+            later["cuda_over_c_speedup"] > 1.0 for later in rows[i:]
+        ):
+            first_sustained_cuda_win = row["elements"]
+            break
+
     summary = {
-        "schema": 1,
+        "schema": 2,
         "runtime_unit": "microseconds",
-        "first_measured_cuda_win_elements": first_cuda_win,
+        "first_measured_median_cuda_win_elements": first_cuda_win,
+        "first_sustained_cuda_win_elements": first_sustained_cuda_win,
         "rows": rows,
     }
     (root / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
@@ -79,7 +88,8 @@ def main() -> int:
             f"{row['cuda_median_us']:.3f},{row['cuda_over_c_speedup']:.4f},"
             f"{row['cuda_kernel_profile_us']}"
         )
-    print(f"first_measured_cuda_win_elements={first_cuda_win}")
+    print(f"first_measured_median_cuda_win_elements={first_cuda_win}")
+    print(f"first_sustained_cuda_win_elements={first_sustained_cuda_win}")
     return 0
 
 
