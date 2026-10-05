@@ -5,7 +5,7 @@
 --
 -- i32 is a physical carrier here. It is NOT a SENS semantic width.
 
-let limit (domain: i32): i32 =
+def limit (domain: i32): i32 =
   if domain == 1 then 2
   else if domain == 2 then 4
   else if domain == 3 then 8
@@ -15,7 +15,7 @@ let limit (domain: i32): i32 =
   else if domain == 7 then 128
   else 0
 
-let current_domain (domain: i32): bool =
+def current_domain (domain: i32): bool =
   domain >= 1 && domain <= 7
 
 entry validate_current (domain: i32) (bits: i32): bool =
