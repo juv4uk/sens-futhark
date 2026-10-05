@@ -78,6 +78,47 @@ The generic labels describe host capability. `sens-futhark` is only a routing la
 
 Multiple runner processes do **not** imply multiple GPUs. Cross-repository arbitration for the one physical GPU belongs to the shared execution lane (`juv4uk/cml#472`), not to this repository.
 
+### Managed listener lifecycle
+
+Issue #69 replaces the historical manual listener process with a user-systemd unit:
+
+```text
+systemd/actions-runner-sens-futhark.service
+```
+
+The unit manages the **already registered** runner under:
+
+```text
+~/gpu-runners/sens-futhark
+```
+
+It does not register a new runner and stores no GitHub token or registration secret.
+
+Install only after the old manual listener is no longer running:
+
+```bash
+bash tools/runner-service.sh status
+bash tools/runner-service.sh install
+```
+
+The helper deliberately refuses installation/restart with
+`REFUSE_DUPLICATE_LISTENER` if `.manual-runner.pid` still identifies a live
+process. Stop only that old listener gracefully, then rerun `install`. Do
+**not** restart or terminate the whole WSL distribution for this migration.
+
+Routine recovery becomes:
+
+```bash
+bash tools/runner-service.sh status
+bash tools/runner-service.sh restart
+bash tools/runner-service.sh logs 100
+```
+
+The status command reports managed service state, stale/live manual PID state,
+registration identity fields, and the tail of the newest runner diagnostic log.
+A broker/listener failure is therefore repaired at the listener boundary while
+other agents and services in WSL remain untouched.
+
 ## Bootstrap
 
 ```bash
