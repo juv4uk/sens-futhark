@@ -1,0 +1,16 @@
+name: futhark-smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    runs-on: [self-hosted, Linux, X64, sens-futhark]
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Futhark
+        run: make bootstrap
+      - name: Check Futhark source
+        run: make check
