@@ -21,7 +21,7 @@ echo "== compile OpenCL backend =="
 "$FUTHARK" opencl "$ROOT/src/smoke.fut" -o "$OUT"
 
 echo "== execute =="
-printf '[1i32, 2i32, 3i32, 4i32]\n' | "$OUT" | tee "$RESULT"
+printf '[1i32, 2i32, 3i32, 4i32]\n' | "$OUT" --entry-point add_one | tee "$RESULT"
 
 if ! grep -Fq '[2i32, 3i32, 4i32, 5i32]' "$RESULT"; then
   echo "Unexpected smoke-test output." >&2
