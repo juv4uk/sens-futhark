@@ -20,3 +20,7 @@ jobs:
         run: make test-identity-cpu
       - name: Run exact-identity witness on CUDA
         run: make test-identity-cuda
+      - name: Check packed-domain kernel
+        run: make check-packed-domain
+      - name: Run packed-domain kernel on CPU and CUDA
+        run: make test-packed-domain
