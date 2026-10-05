@@ -35,6 +35,12 @@ test-identity-cpu:
 test-identity-cuda:
 	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/identity_witness.fut
 
+export-selector-law: sens-fetch
+	python3 tools/export-selector-law.py
+
+check-selector-law:
+	$(FUTHARK) check -w futhark/selector_law.fut
+
 check-packed-domain:
 	$(FUTHARK) check -w futhark/packed_domain.fut
 	python3 tools/validate-packed-domain-vectors.py
