@@ -2,3 +2,5 @@
 fixtures/imported/
 build/
 __pycache__/
+bench/results/
+bench/data/
