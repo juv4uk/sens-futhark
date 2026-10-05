@@ -1,6 +1,9 @@
 name: runner-smoke
 
 on:
+  push:
+    branches:
+      - agent/chatgpt-sol/1-futhark-toolchain
   workflow_dispatch:
 
 jobs:
