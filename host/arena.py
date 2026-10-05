@@ -97,7 +97,7 @@ class Arena:
 
     # ---- minimal dispatch (selector-law tables are stage S2) --------
     def register(self, domain: int, handler_id: int) -> None:
-        self.selector[int(domain)] = int(handler_id)
+        self.selector[int(domain)i] = int(handler_id)
 
     def dispatch(self, i: int):
         return self.selector.get(int(self.domain[i]))
@@ -121,7 +121,7 @@ class Arena:
 
         Returns (new_roots, live_count). Frees the tail for reuse.
         """
-        live = sorted(self.make(roots))
+        live = sorted(self.mark(roots))
         remap = {old: new for new, old in enumerate(live)}
         for new, old in enumerate(live):
             if new != old:
@@ -169,5 +169,31 @@ class Arena:
         a.right = np.array(bufs["right"], dtype=np.uint32)
         a.value = np.array(bufs["value"], dtype=np.int64)
         a.high_water = int(bufs["high_water"])
+        a._free = [i for i in range(a.capacity - 1, -1, -1) if a.tag[i] == FREE]
+        return a
+
+    # ---- DMA payload (blob) ----------------------------------------
+    def to_blob(self) -> bytes:
+        """The device transfer payload: SoA blocks concatenated in field order."""
+        return b"".join(
+            (
+                self.tag.tobytes(),
+                self.domain.tobytes(),
+                self.left.tobytes(),
+                self.right.tobytes(),
+                self.value.tobytes(),
+            )
+        )
+
+    @classmethod
+    def from_blob(cls, blob: bytes, capacity: int, node_bytes: int = 24) -> "Arena":
+        dtypes = (np.uint8, np.uint32, np.uint32, np.uint32, np.int64)
+        a = cls(int(capacity), node_bytes=node_bytes)
+        off = 0
+        for (name, _type, size, _align), dt in zip(NODE_FIELDS, dtypes):
+            n = int(capacity) * size
+            setattr(a, name, np.frombuffer(blob[off : off + n], dtype=dt).copy())
+            off += n
+        a.high_water = a.capacity
         a._free = [i for i in range(a.capacity - 1, -1, -1) if a.tag[i] == FREE]
         return a
