@@ -1,0 +1,10 @@
+# Negative corpus for the CPU reference witness (#3).
+# Every row here is INVALID and must fail closed, deterministically.
+# Columns: domain,width,bits,exact_text
+domain,width,bits,exact_text
+0,0,0,
+8,8,0,00000000
+1,1,2,10
+2,2,4,100
+7,7,128,10000000
+3,2,1,01
