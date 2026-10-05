@@ -209,7 +209,7 @@ cuda_env_main() {
         echo "usage: $0 run <command> [args...]" >&2
         return 2
       }
-      cuda_env_require
+      cuda_env_require || return $?
       exec "$@"
       ;;
     *)
