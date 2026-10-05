@@ -1,15 +1,13 @@
 name: futhark-smoke
 
 on:
-  push:
-    branches:
-      - main
-      - 'agent/**'
   pull_request:
+  workflow_dispatch:
 
 jobs:
   syntax:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, sens-futhark]
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Futhark
