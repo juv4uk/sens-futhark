@@ -3,6 +3,10 @@
 
 The hardware profile is a *parameter*, not hard-coded: capacity is derived, so a
 different card is a config change, not a rewrite.
+
+Two packing modes matter:
+    aos — one struct per node, with alignment padding (conservative).
+    soa — separate arrays per field, tightly packed (what the arena actually uses).
 """
 from __future__ import annotations
 
@@ -20,16 +24,20 @@ def load_profile(path: str | None = None) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
-def budget(profile: dict) -> dict:
+def budget(profile: dict, packing: str | None = None) -> dict:
     """Derive the usable VRAM and the node capacity from a profile."""
+    mode = packing or profile.get("packing", "aos")
+    modes = profile.get("packing_modes") or {}
+    node = int(modes[mode]) if mode in modes else int(profile["node_bytes"])
+
     usable = int(profile["vram_total_bytes"]) - int(profile["reserved_bytes"])
-    node = int(profile["node_bytes"])
     if node <= 0:
-        raise ValueError("node_bytes must be positive")
+        raise ValueError("node size must be positive")
     if usable <= 0:
         raise ValueError("reserved_bytes leaves no usable VRAM")
     return {
         "usable_bytes": usable,
+        "packing": mode,
         "node_bytes": node,
         "node_capacity": usable // node,
     }
@@ -37,11 +45,14 @@ def budget(profile: dict) -> dict:
 
 def main() -> int:
     prof = load_profile()
-    b = budget(prof)
     print(f"profile  = {prof['name']}")
-    print(f"usable   = {b['usable_bytes']} B ({b['usable_bytes'] / 2**30:.2f} GiB)")
-    print(f"node     = {b['node_bytes']} B")
-    print(f"capacity = {b['node_capacity']} nodes")
+    for mode in ("aos", "soa"):
+        b = budget(prof, mode)
+        print(
+            f"  {mode}: node={b['node_bytes']} B, "
+            f"usable={b['usable_bytes']} B ({b['usable_bytes'] / 2**30:.2f} GiB), "
+            f"capacity={b['node_capacity']} nodes"
+        )
     return 0
 
 
