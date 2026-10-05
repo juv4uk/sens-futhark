@@ -1,18 +1,31 @@
-name: benchmark-smoke
+name: benchmark
 
 on:
-  push:
-    branches:
-      - agent/chatgpt-sol/5-benchmark-harness-v2
   workflow_dispatch:
+    inputs:
+      sizes:
+        description: Comma-separated batch sizes
+        required: true
+        default: "1048576,2097152,4194304,8388608"
+        type: string
+      runs:
+        description: Futhark bench sampling interval
+        required: true
+        default: "5"
+        type: string
+      cold_runs:
+        description: Cold process launches per backend
+        required: true
+        default: "2"
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  smoke:
+  benchmark:
     runs-on: [self-hosted, Linux, X64, sens-futhark]
-    timeout-minutes: 12
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -24,25 +37,25 @@ jobs:
           python3 -m py_compile bench/run.py
           python3 -m py_compile bench/summarize.py
 
-      - name: Run crossover benchmark
+      - name: Run benchmark
         env:
           FUTHARK: ${{ github.workspace }}/.tools/bin/futhark
           CUDA_HOME: /usr/local/cuda-12.6
         run: |
           python3 bench/run.py \
-            --sizes 1048576,2097152,4194304,8388608 \
-            --runs 5 \
-            --cold-runs 2 \
-            --out bench/results/smoke
-          python3 bench/summarize.py bench/results/smoke | tee bench/results/smoke/summary.txt
+            --sizes "${{ inputs.sizes }}" \
+            --runs "${{ inputs.runs }}" \
+            --cold-runs "${{ inputs.cold_runs }}" \
+            --out bench/results/run
+          python3 bench/summarize.py bench/results/run | tee bench/results/run/summary.txt
 
-      - name: Show benchmark evidence
+      - name: Show benchmark summary
         if: always()
         run: |
           for f in metadata.json summary.json summary.txt; do
-            if [ -f "bench/results/smoke/$f" ]; then
+            if [ -f "bench/results/run/$f" ]; then
               echo "===== $f ====="
-              cat "bench/results/smoke/$f"
+              cat "bench/results/run/$f"
             fi
           done
 
@@ -51,5 +64,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sens-futhark-benchmark-${{ github.sha }}
-          path: bench/results/smoke
+          path: bench/results/run
           if-no-files-found: error
