@@ -5,7 +5,7 @@ CPU_WITNESS ?= host/cpu_witness.py
 PARITY_RUNNER ?= host/parity.py
 BACKEND_WITNESS ?=
 
-.PHONY: bootstrap probe check check-identity test-identity-cpu test-identity-cuda smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity
+.PHONY: bootstrap probe check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -24,6 +24,14 @@ test-identity-cpu:
 
 test-identity-cuda:
 	$(FUTHARK) test --backend=cuda futhark/identity_witness.fut
+
+check-packed-domain:
+	$(FUTHARK) check -w futhark/packed_domain.fut
+	python3 tools/validate-packed-domain-vectors.py
+
+test-packed-domain:
+	$(FUTHARK) test --backend=c futhark/packed_domain.fut
+	$(FUTHARK) test --backend=cuda futhark/packed_domain.fut
 
 smoke-opencl:
 	FUTHARK=$(FUTHARK) bash tools/smoke-opencl.sh
