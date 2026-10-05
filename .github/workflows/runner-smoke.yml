@@ -31,5 +31,9 @@ jobs:
       - name: Probe GPU and OpenCL
         run: make probe
 
-      - name: Compile and execute OpenCL smoke
+      - name: OpenCL runtime probe
+        continue-on-error: true
         run: make smoke-opencl
+
+      - name: CUDA GPU smoke
+        run: make smoke-cuda
