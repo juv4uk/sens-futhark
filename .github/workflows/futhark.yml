@@ -1,93 +1,49 @@
-name: Futhark witnesses
+name: GPU-only CUDA witnesses
 
 on:
   push:
     branches: [main]
   pull_request:
   workflow_dispatch:
-    inputs:
-      gpu:
-        description: Run the CUDA witness on the self-hosted GPU runner
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
 
+# Only the newest GPU request for a ref may occupy the single physical card.
 concurrency:
-  group: sens-futhark-witness-${{ github.ref }}
+  group: sens-futhark-gpu-only-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  cpu-check:
-    name: Futhark CPU source check
-    runs-on: [self-hosted, Linux, X64, sens-futhark]
+  cuda:
+    name: CUDA-only witness
+    # Fail closed onto the GPU-capable runner. Never fall back to an ordinary CPU runner.
+    runs-on: [self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Install pinned Futhark
-        run: make bootstrap
-      - name: Verify pinned version
-        run: .tools/bin/futhark --version | grep -F "$(sed -n 's/^FUTHARK_VERSION=//p' toolchain/futhark.env)"
-      - name: Check sources
-        run: |
-          make check
-          make check-identity
-          make check-packed-domain
 
-  cpu-witness:
-    name: Futhark CPU witness
-    runs-on: [self-hosted, Linux, X64, sens-futhark]
-    needs: cpu-check
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
+      # Host-control step only: prepares the compiler used to launch CUDA work.
       - name: Install pinned Futhark
         run: make bootstrap
-      - name: Run CPU witnesses
-        run: |
-          make test-identity-cpu
-          .tools/bin/futhark test --backend=c futhark/packed_domain.fut
-      - name: Publish CPU evidence metadata
+
+      - name: Prove CUDA device contract
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p evidence/futhark
-          version="$(sed -n 's/^FUTHARK_VERSION=//p' toolchain/futhark.env)"
-          sha256="$(sed -n 's/^FUTHARK_ARCHIVE_SHA256=//p' toolchain/futhark.env)"
-          {
-            echo "repository_sha=$GITHUB_SHA"
-            echo "futhark_version=$version"
-            echo "futhark_sha256=$sha256"
-            echo "backend=c"
-            echo "runner=$RUNNER_NAME"
-          } > evidence/futhark/cpu.env
-      - uses: actions/upload-artifact@v4
-        with:
-          name: futhark-cpu-evidence-${{ github.sha }}
-          path: evidence/futhark/cpu.env
+          make probe-cuda-json | tee evidence/futhark/cuda-capability.json
 
-  cuda:
-    name: Futhark CUDA witness
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.gpu == true }}
-    runs-on: [self-hosted, Linux, X64, sens-futhark]
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install pinned Futhark
-        run: make bootstrap
-      - name: Verify CUDA host contract
-        run: make probe-cuda-json
-      - name: Run CUDA witnesses
+      - name: Run CUDA-only workloads
         run: |
+          make smoke-cuda
           make test-identity-cuda
-          make test-packed-domain
+          make test-packed-domain-cuda
+
       - name: Publish CUDA evidence metadata
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p evidence/futhark
           version="$(sed -n 's/^FUTHARK_VERSION=//p' toolchain/futhark.env)"
           sha256="$(sed -n 's/^FUTHARK_ARCHIVE_SHA256=//p' toolchain/futhark.env)"
           {
@@ -96,8 +52,12 @@ jobs:
             echo "futhark_sha256=$sha256"
             echo "backend=cuda"
             echo "runner=$RUNNER_NAME"
+            echo "policy=gpu-only"
           } > evidence/futhark/cuda.env
+
       - uses: actions/upload-artifact@v4
         with:
           name: futhark-cuda-evidence-${{ github.sha }}
-          path: evidence/futhark/cuda.env
+          path: |
+            evidence/futhark/cuda.env
+            evidence/futhark/cuda-capability.json
