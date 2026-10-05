@@ -10,7 +10,7 @@ ARGS ?=
 # GPU-only policy (#79): automatic CI runs only the CUDA targets below.
 # Targets marked 'reference-only' execute the C backend on the host; they are an
 # internal semantic reference and must never be treated as a release/CI path.
-.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain test-packed-domain-cuda smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-cli sens-cli-parity verify-sens-pin release-evidence
+.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain test-packed-domain-cuda smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-fetch sens-cli sens-cli-parity verify-sens-pin release-evidence
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -74,10 +74,13 @@ witness-parity:
 verify-sens-pin:
 	bash tools/verify-sens-source-pin.sh
 
-sens-cli:
+sens-fetch:
+	bash tools/fetch-sens-source.sh
+
+sens-cli: sens-fetch
 	bash tools/sens-cli.sh $(ARGS)
 
-sens-cli-parity:
+sens-cli-parity: sens-fetch
 	bash tools/smoke-sens-cli-parity.sh
 
 release-evidence:
