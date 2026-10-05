@@ -84,8 +84,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
-          curl --fail --location --retry 3 "$FUTHARK_URL" -o "$RUNNER_TEMP/futhark.tar.xz"
-          echo "$FUTHARK_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
+          url="$FUTHARK_RELEASE_BASE_URL/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz"
+          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
           tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
           test -n "$bin"
@@ -110,7 +111,7 @@ jobs:
           {
             echo "repository_sha=$GITHUB_SHA"
             echo "futhark_version=$FUTHARK_VERSION"
-            echo "futhark_sha256=$FUTHARK_SHA256"
+            echo "futhark_sha256=$FUTHARK_ARCHIVE_SHA256"
             echo "backend=cuda"
             echo "runner=$RUNNER_NAME"
           } > evidence/futhark/cuda.env
