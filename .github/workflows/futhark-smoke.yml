@@ -4,10 +4,11 @@ on:
   pull_request:
   workflow_dispatch:
 
-# One physical GPU runner backs these tests; never create competing CUDA contexts.
+# One physical GPU backs this repository. Prefer the newest request rather than
+# spending the GPU lane on obsolete revisions.
 concurrency:
   group: sens-futhark-gpu
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   witness:
