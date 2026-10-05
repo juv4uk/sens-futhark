@@ -1,0 +1,120 @@
+name: Futhark witnesses
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      gpu:
+        description: Run the CUDA witness on a self-hosted GPU runner
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  FUTHARK_VERSION: '0.27.1'
+  FUTHARK_PLATFORM: 'linux-x86_64'
+  FUTHARK_SHA256: '11248f098643487627f69695be29d96dee351a56d3f27f3715da7cf0638a0b8f'
+  FUTHARK_URL: 'https://futhark-lang.org/releases/futhark-0.27.1-linux-x86_64.tar.xz'
+
+jobs:
+  cpu:
+    name: Futhark CPU witness
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host prerequisites
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates gcc xz-utils
+      - name: Install pinned Futhark
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
+          curl --fail --location --retry 3 "$FUTHARK_URL" -o "$RUNNER_TEMP/futhark.tar.xz"
+          echo "$FUTHARK_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
+          bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
+          test -n "$bin"
+          prefix="$(dirname "$(dirname "$bin")")"
+          rm -rf "$HOME/.local/futhark"
+          cp -a "$prefix" "$HOME/.local/futhark"
+          echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
+      - name: Verify toolchain
+        run: |
+          set -euo pipefail
+          futhark --version
+          test "$(futhark --version | head -n1)" = "Futhark 0.27.1"
+      - name: Check source
+        run: futhark check -w futhark/identity_witness.fut
+      - name: Run CPU witness
+        run: futhark test --backend=c futhark/identity_witness.fut
+      - name: Publish CPU evidence metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/futhark
+          {
+            echo "repository_sha=$GITHUB_SHA"
+            echo "futhark_version=$FUTHARK_VERSION"
+            echo "futhark_sha256=$FUTHARK_SHA256"
+            echo "backend=c"
+            echo "runner=$RUNNER_NAME"
+          } > evidence/futhark/cpu.env
+      - uses: actions/upload-artifact@v4
+        with:
+          name: futhark-cpu-evidence-${{ github.sha }}
+          path: evidence/futhark/cpu.env
+
+  cuda:
+    name: Futhark CUDA witness
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.gpu == true }}
+    runs-on: [self-hosted, linux, x64, gpu, cuda]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify CUDA host
+        run: nvidia-smi
+      - name: Install host prerequisites
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates xz-utils
+      - name: Install pinned Futhark
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
+          curl --fail --location --retry 3 "$FUTHARK_URL" -o "$RUNNER_TEMP/futhark.tar.xz"
+          echo "$FUTHARK_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
+          bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
+          test -n "$bin"
+          prefix="$(dirname "$(dirname "$bin")")"
+          rm -rf "$HOME/.local/futhark"
+          cp -a "$prefix" "$HOME/.local/futhark"
+          echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
+      - name: Verify toolchain
+        run: |
+          set -euo pipefail
+          futhark --version
+          test "$(futhark --version | head -n1)" = "Futhark 0.27.1"
+      - name: Check source
+        run: futhark check -w futhark/identity_witness.fut
+      - name: Run CUDA witness
+        run: futhark test --backend=cuda futhark/identity_witness.fut
+      - name: Publish CUDA evidence metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/futhark
+          {
+            echo "repository_sha=$GITHUB_SHA"
+            echo "futhark_version=$FUTHARK_VERSION"
+            echo "futhark_sha256=$FUTHARK_SHA256"
+            echo "backend=cuda"
+            echo "runner=$RUNNER_NAME"
+          } > evidence/futhark/cuda.env
+      - uses: actions/upload-artifact@v4
+        with:
+          name: futhark-cuda-evidence-${{ github.sha }}
+          path: evidence/futhark/cuda.env
