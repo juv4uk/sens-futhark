@@ -18,6 +18,7 @@ class RunnerServiceTests(unittest.TestCase):
         self.assertIn("Restart=always", text)
         self.assertIn("KillSignal=SIGINT", text)
         self.assertIn("network-online.target", text)
+        self.assertIn("ConditionFileIsExecutable=%h/gpu-runners/sens-futhark/run.sh", text)
 
     def test_unit_does_not_embed_credentials_or_registration_tokens(self) -> None:
         lowered = UNIT.read_text(encoding="utf-8").lower()
