@@ -13,15 +13,15 @@ entry equal_samples
 
 -- ==
 -- entry: validate_samples
--- input { [1,2,3,4,5,6,7] [1,3,7,15,31,63,127] }
+-- input { [1i32,2i32,3i32,4i32,5i32,6i32,7i32] [1i32,3i32,7i32,15i32,31i32,63i32,127i32] }
 -- output { [true,true,true,true,true,true,true] }
 
 -- ==
 -- entry: validate_samples
--- input { [0,8,3,7] [0,0,8,127] }
+-- input { [0i32,8i32,3i32,7i32] [0i32,0i32,8i32,127i32] }
 -- output { [false,false,false,true] }
 
 -- ==
 -- entry: equal_samples
--- input { [1,3,3,7] [1,1,7,42] [3,3,3,7] [1,1,7,42] }
+-- input { [1i32,3i32,3i32,7i32] [1i32,1i32,7i32,42i32] [3i32,3i32,3i32,7i32] [1i32,1i32,7i32,42i32] }
 -- output { [false,false,true,true] }
