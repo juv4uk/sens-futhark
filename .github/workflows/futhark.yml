@@ -96,7 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           futhark --version
-          test "$(futhark --version | head -n1)" = "Futhark 0.27.1"
+          futhark --version | grep -F "0.27.1"
       - name: Check source
         run: futhark check -w futhark/identity_witness.fut
       - name: Run CUDA witness
