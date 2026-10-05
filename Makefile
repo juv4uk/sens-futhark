@@ -7,7 +7,7 @@ PARITY_RUNNER ?= host/parity.py
 BACKEND_WITNESS ?=
 ARGS ?=
 
-.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-cli sens-cli-parity verify-sens-pin release-evidence
+.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain test-packed-domain-cuda smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-cli sens-cli-parity verify-sens-pin release-evidence
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -36,6 +36,10 @@ check-packed-domain:
 
 test-packed-domain:
 	$(FUTHARK) test --backend=c futhark/packed_domain.fut
+	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/packed_domain.fut
+
+# Automatic GPU-only CI must use this target so it can never execute backend=c.
+test-packed-domain-cuda:
 	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/packed_domain.fut
 
 smoke-opencl:
