@@ -7,13 +7,23 @@ on:
   workflow_dispatch:
 
 jobs:
-  smoke:
+  gpu-smoke:
     runs-on: [self-hosted, Linux, X64, sens-futhark]
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
+      - uses: actions/checkout@v4
+
       - name: Runner identity
         run: |
           echo "runner=$RUNNER_NAME"
           echo "os=$RUNNER_OS"
           uname -a
-          nvidia-smi -L || true
+
+      - name: Bootstrap pinned Futhark
+        run: make bootstrap
+
+      - name: Probe GPU and OpenCL
+        run: make probe
+
+      - name: Compile and execute OpenCL smoke
+        run: make smoke-opencl
