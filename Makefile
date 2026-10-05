@@ -7,6 +7,9 @@ PARITY_RUNNER ?= host/parity.py
 BACKEND_WITNESS ?=
 ARGS ?=
 
+# GPU-only policy (#79): automatic CI runs only the CUDA targets below.
+# Targets marked 'reference-only' execute the C backend on the host; they are an
+# internal semantic reference and must never be treated as a release/CI path.
 .PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain test-packed-domain-cuda smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-cli sens-cli-parity verify-sens-pin release-evidence
 
 bootstrap:
@@ -24,9 +27,11 @@ check:
 check-identity:
 	$(FUTHARK) check -w futhark/identity_witness.fut
 
+# reference-only: local semantic reference, NOT a CI lane (GPU-only policy #79).
 test-identity-cpu:
 	$(FUTHARK) test --backend=c futhark/identity_witness.fut
 
+# Fail-closed: cuda-env.sh run refuses (exit 4) when the CUDA host is unavailable.
 test-identity-cuda:
 	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/identity_witness.fut
 
@@ -34,6 +39,7 @@ check-packed-domain:
 	$(FUTHARK) check -w futhark/packed_domain.fut
 	python3 tools/validate-packed-domain-vectors.py
 
+# reference-only (mixed): C backend as a reference, then CUDA; not a CI lane (#79).
 test-packed-domain:
 	$(FUTHARK) test --backend=c futhark/packed_domain.fut
 	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/packed_domain.fut
@@ -45,6 +51,7 @@ test-packed-domain-cuda:
 smoke-opencl:
 	FUTHARK=$(FUTHARK) bash tools/smoke-opencl.sh
 
+# Fail-closed: smoke-cuda.sh requires the CUDA host (cuda_env_require).
 smoke-cuda:
 	FUTHARK=$(FUTHARK) bash tools/smoke-cuda.sh
 
@@ -52,6 +59,7 @@ import-fixture:
 	@test -n "$(SENS_FIXTURE_SOURCE)" || { echo "SENS_FIXTURE_SOURCE is required; no local fixture fallback exists." >&2; exit 2; }
 	python3 host/import_sens_fixture.py --source "$(SENS_FIXTURE_SOURCE)" --destination "$(FIXTURE_DESTINATION)"
 
+# reference-only: CPU witness over the imported fixture; NOT a CI lane (#79).
 witness-cpu:
 	@test -f "$(FIXTURE_DESTINATION)/identity_vectors.csv" || { echo "Imported fixture missing; run make import-fixture SENS_FIXTURE_SOURCE=/path/to/sens-bundle first." >&2; exit 2; }
 	@python3 -c 'import json; m=json.load(open("$(FIXTURE_DESTINATION)/manifest.json", encoding="utf-8")); print("(provenance (source {}) (commit {}) (contract {}) (sha256 {}))".format(m["source_repository"], m["source_commit"], m["contract_version"], m["payload_sha256"]))'
