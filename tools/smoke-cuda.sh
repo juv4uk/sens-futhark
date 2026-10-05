@@ -5,8 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FUTHARK="${FUTHARK:-$ROOT/.tools/bin/futhark}"
 OUT="$ROOT/build/smoke-cuda"
 RESULT="$ROOT/build/smoke-cuda.out"
-CUDA_ROOT="${CUDA_HOME:-${CUDA_PATH:-/usr/local/cuda-12.6}}"
-CUDA_TARGET="$CUDA_ROOT/targets/x86_64-linux"
+
+# shellcheck source=tools/cuda-env.sh
+source "$ROOT/tools/cuda-env.sh"
+cuda_env_require
 
 if [[ ! -x "$FUTHARK" ]]; then
   echo "Futhark compiler not found at $FUTHARK" >&2
@@ -14,23 +16,14 @@ if [[ ! -x "$FUTHARK" ]]; then
   exit 2
 fi
 
-if [[ ! -f "$CUDA_TARGET/include/cuda.h" ]]; then
-  echo "cuda.h not found under $CUDA_TARGET/include" >&2
-  exit 4
-fi
-
-export CPATH="$CUDA_TARGET/include${CPATH:+:$CPATH}"
-export LIBRARY_PATH="/usr/lib/wsl/lib:$CUDA_TARGET/lib${LIBRARY_PATH:+:$LIBRARY_PATH}"
-export LD_LIBRARY_PATH="/usr/lib/wsl/lib:$CUDA_TARGET/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-
 mkdir -p "$ROOT/build"
 
 echo "== compiler =="
 "$FUTHARK" --version
 
-echo "== CUDA paths =="
-echo "CUDA_ROOT=$CUDA_ROOT"
-echo "CUDA_TARGET=$CUDA_TARGET"
+echo "== CUDA host capability =="
+cuda_env_print
+cuda_env_json
 
 echo "== compile CUDA backend =="
 "$FUTHARK" cuda "$ROOT/src/smoke.fut" -o "$OUT"
