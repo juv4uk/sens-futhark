@@ -106,7 +106,22 @@ The helper deliberately refuses installation/restart with
 process. Stop only that old listener gracefully, then rerun `install`. Do
 **not** restart or terminate the whole WSL distribution for this migration.
 
-Routine recovery becomes:
+Routine recovery starts with the non-destructive doctor:
+
+```bash
+bash tools/runner-service.sh doctor
+```
+
+The doctor returns an explicit state and next action:
+
+- `0`: managed listener is active;
+- `3`: the old manual listener is still live; stop only that listener gracefully before installing the service;
+- `4`: user-systemd or a live listener is unavailable; follow the printed `NEXT=` action;
+- `5`: both manual and managed listeners appear live; resolve the duplicate before running jobs.
+
+It also validates that a stale PID file still points to an actual Actions runner process, so PID reuse cannot permanently block migration.
+
+Routine inspection/recovery remains:
 
 ```bash
 bash tools/runner-service.sh status

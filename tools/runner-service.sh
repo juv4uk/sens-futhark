@@ -20,7 +20,13 @@ manual_pid() {
 manual_listener_is_live() {
   local pid
   pid="$(manual_pid)" || return 1
-  kill -0 "$pid" 2>/dev/null
+  kill -0 "$pid" 2>/dev/null || return 1
+
+  # A stale PID file must not block recovery merely because Linux reused its PID.
+  # Accept only a process that still looks like the configured Actions runner.
+  local cmdline
+  cmdline="$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || true)"
+  [[ "$cmdline" == *"Runner.Listener"* || "$cmdline" == *"$ROOT"* ]]
 }
 
 preflight() {
@@ -38,8 +44,19 @@ preflight() {
   }
 }
 
+systemd_user_is_ready() {
+  command -v systemctl >/dev/null 2>&1 || return 1
+  systemctl --user show-environment >/dev/null 2>&1
+}
+
 install_service() {
   preflight
+
+  if ! systemd_user_is_ready; then
+    echo "USER_SYSTEMD_UNAVAILABLE" >&2
+    echo "The user systemd manager is not reachable; do not register a replacement runner." >&2
+    return 4
+  fi
 
   if manual_listener_is_live; then
     local pid
@@ -63,9 +80,13 @@ EOF
 
 status_service() {
   echo "== managed service =="
-  systemctl --user show "$SERVICE_NAME" \
-    -p LoadState -p ActiveState -p SubState -p MainPID -p FragmentPath \
-    --no-pager || true
+  if systemd_user_is_ready; then
+    systemctl --user show "$SERVICE_NAME" \
+      -p LoadState -p ActiveState -p SubState -p MainPID -p FragmentPath \
+      --no-pager || true
+  else
+    echo "USER_SYSTEMD_UNAVAILABLE"
+  fi
 
   echo
   echo "== manual listener =="
@@ -107,8 +128,70 @@ PY
   fi
 }
 
+doctor_service() {
+  local rc=0
+
+  echo "== doctor: prerequisites =="
+  if preflight; then
+    echo "PREFLIGHT=ready"
+  else
+    rc=$?
+    echo "PREFLIGHT=failed code=$rc"
+    return "$rc"
+  fi
+
+  echo
+  echo "== doctor: user systemd =="
+  if systemd_user_is_ready; then
+    echo "USER_SYSTEMD=ready"
+  else
+    echo "USER_SYSTEMD=unavailable"
+    return 4
+  fi
+
+  echo
+  echo "== doctor: listener ownership =="
+  local managed="inactive"
+  if systemctl --user is-active --quiet "$SERVICE_NAME"; then
+    managed="active"
+  fi
+
+  if manual_listener_is_live; then
+    local pid
+    pid="$(manual_pid)"
+    echo "MANUAL_LISTENER=live pid=$pid"
+    echo "MANAGED_LISTENER=$managed"
+    if [[ "$managed" == "active" ]]; then
+      echo "DOCTOR=duplicate-listeners"
+      return 5
+    fi
+    echo "DOCTOR=manual-listener-live"
+    echo "NEXT=stop only pid $pid gracefully, then run: bash tools/runner-service.sh install"
+    return 3
+  fi
+
+  echo "MANUAL_LISTENER=absent"
+  echo "MANAGED_LISTENER=$managed"
+  if [[ "$managed" == "active" ]]; then
+    echo "DOCTOR=ready"
+    return 0
+  fi
+
+  echo "DOCTOR=no-live-listener"
+  if [[ -f "$UNIT_DEST" ]]; then
+    echo "NEXT=bash tools/runner-service.sh restart"
+  else
+    echo "NEXT=bash tools/runner-service.sh install"
+  fi
+  return 4
+}
+
 restart_service() {
   preflight
+  if ! systemd_user_is_ready; then
+    echo "USER_SYSTEMD_UNAVAILABLE" >&2
+    return 4
+  fi
   if manual_listener_is_live; then
     echo "REFUSE_DUPLICATE_LISTENER pid=$(manual_pid)" >&2
     return 3
@@ -124,6 +207,9 @@ case "${1:-}" in
   status)
     status_service
     ;;
+  doctor)
+    doctor_service
+    ;;
   restart)
     restart_service
     ;;
@@ -131,7 +217,7 @@ case "${1:-}" in
     exec journalctl --user -u "$SERVICE_NAME" -n "${2:-100}" --no-pager
     ;;
   *)
-    echo "usage: $0 {install|status|restart|logs [lines]}" >&2
+    echo "usage: $0 {doctor|install|status|restart|logs [lines]}" >&2
     exit 2
     ;;
 esac
