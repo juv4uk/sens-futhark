@@ -24,15 +24,14 @@ jobs:
       - name: Load pinned toolchain
         run: cat toolchain/futhark.env >> "$GITHUB_ENV"
       - name: Install prerequisites
-        run: sudo apt-get update && sudo apt-get install -y ca-certificates xz-utils
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates xz-utils gh
       - name: Download archive
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/futhark"
-          url="$FUTHARK_ARCHIVE_URL"
-          echo "url=$url"
-          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          gh release download "v$FUTHARK_VERSION" --repo diku-dk/futhark --pattern "futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" --dir "$RUNNER_TEMP/futhark" --clobber
+          mv "$RUNNER_TEMP/futhark/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" "$RUNNER_TEMP/futhark.tar.xz"
           ls -lh "$RUNNER_TEMP/futhark.tar.xz"
       - name: Verify archive
         shell: bash
@@ -81,14 +80,14 @@ jobs:
       - name: Load pinned toolchain
         run: cat toolchain/futhark.env >> "$GITHUB_ENV"
       - name: Install prerequisites
-        run: sudo apt-get update && sudo apt-get install -y ca-certificates gcc xz-utils
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates gcc xz-utils gh
       - name: Install pinned Futhark
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
-          url="$FUTHARK_ARCHIVE_URL"
-          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          gh release download "v$FUTHARK_VERSION" --repo diku-dk/futhark --pattern "futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" --dir "$RUNNER_TEMP/futhark" --clobber
+          mv "$RUNNER_TEMP/futhark/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" "$RUNNER_TEMP/futhark.tar.xz"
           echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
           tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
@@ -114,8 +113,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
-          url="$FUTHARK_ARCHIVE_URL"
-          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          gh release download "v$FUTHARK_VERSION" --repo diku-dk/futhark --pattern "futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" --dir "$RUNNER_TEMP/futhark" --clobber
+          mv "$RUNNER_TEMP/futhark/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" "$RUNNER_TEMP/futhark.tar.xz"
           echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
           tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
@@ -141,8 +140,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
-          url="$FUTHARK_ARCHIVE_URL"
-          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          gh release download "v$FUTHARK_VERSION" --repo diku-dk/futhark --pattern "futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" --dir "$RUNNER_TEMP/futhark" --clobber
+          mv "$RUNNER_TEMP/futhark/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" "$RUNNER_TEMP/futhark.tar.xz"
           echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
           tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
@@ -186,8 +185,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
-          url="$FUTHARK_ARCHIVE_URL"
-          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          gh release download "v$FUTHARK_VERSION" --repo diku-dk/futhark --pattern "futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" --dir "$RUNNER_TEMP/futhark" --clobber
+          mv "$RUNNER_TEMP/futhark/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz" "$RUNNER_TEMP/futhark.tar.xz"
           echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
           tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
