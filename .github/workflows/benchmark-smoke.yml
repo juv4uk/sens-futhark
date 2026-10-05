@@ -12,7 +12,7 @@ permissions:
 jobs:
   smoke:
     runs-on: [self-hosted, Linux, X64, sens-futhark]
-    timeout-minutes: 25
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
