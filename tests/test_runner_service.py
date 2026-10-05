@@ -32,6 +32,20 @@ class RunnerServiceTests(unittest.TestCase):
         self.assertNotIn("wsl --terminate", text)
         self.assertNotIn("wsl.exe --terminate", text)
 
+    def test_tool_has_non_destructive_doctor(self) -> None:
+        text = TOOL.read_text(encoding="utf-8")
+        self.assertIn("doctor_service", text)
+        self.assertIn("USER_SYSTEMD=ready", text)
+        self.assertIn("DOCTOR=no-live-listener", text)
+        self.assertIn("DOCTOR=duplicate-listeners", text)
+        self.assertNotIn("config.sh --url", text)
+        self.assertNotIn("./config.sh", text)
+
+    def test_manual_pid_guard_checks_process_identity(self) -> None:
+        text = TOOL.read_text(encoding="utf-8")
+        self.assertIn('/proc/$pid/cmdline', text)
+        self.assertIn("Runner.Listener", text)
+
     def test_tool_is_valid_bash(self) -> None:
         result = subprocess.run(
             ["bash", "-n", str(TOOL)],
