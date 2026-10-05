@@ -8,7 +8,7 @@ CPU_WITNESS ?= host/cpu_witness.py
 PARITY_RUNNER ?= host/parity.py
 BACKEND_WITNESS ?=
 
-.PHONY: bootstrap probe check check-identity test-identity-cpu test-identity-cuda smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity
+.PHONY: bootstrap probe check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -32,6 +32,19 @@ test-identity-cuda:
 	LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib$${LIBRARY_PATH:+:$$LIBRARY_PATH}" \
 	LD_LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
 	$(FUTHARK) test --backend=cuda futhark/identity_witness.fut
+
+check-packed-domain:
+	$(FUTHARK) check -w futhark/packed_domain.fut
+	python3 tools/validate-packed-domain-vectors.py
+
+test-packed-domain:
+	$(FUTHARK) test --backend=c futhark/packed_domain.fut
+	test -f "$(CUDA_TARGET)/include/cuda.h"
+	CUDA_HOME="$(CUDA_ROOT)" CUDA_PATH="$(CUDA_ROOT)" \
+	CPATH="$(CUDA_TARGET)/include$${CPATH:+:$$CPATH}" \
+	LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib$${LIBRARY_PATH:+:$$LIBRARY_PATH}" \
+	LD_LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
+	$(FUTHARK) test --backend=cuda futhark/packed_domain.fut
 
 smoke-opencl:
 	FUTHARK=$(FUTHARK) bash tools/smoke-opencl.sh
