@@ -15,11 +15,6 @@ on:
 permissions:
   contents: read
 
-env:
-  FUTHARK_VERSION: '0.27.1'
-  FUTHARK_PLATFORM: 'linux-x86_64'
-  FUTHARK_SHA256: '11248f098643487627f69695be29d96dee351a56d3f27f3715da7cf0638a0b8f'
-  FUTHARK_URL: 'https://futhark-lang.org/releases/futhark-0.27.1-linux-x86_64.tar.xz'
 
 jobs:
   cpu:
@@ -27,6 +22,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Load pinned toolchain
+        run: cat toolchain/futhark.env >> "$GITHUB_ENV"
       - name: Install host prerequisites
         run: sudo apt-get update && sudo apt-get install -y ca-certificates gcc xz-utils
       - name: Install pinned Futhark
@@ -47,7 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           futhark --version
-          test "$(futhark --version | head -n1)" = "Futhark 0.27.1"
+          futhark --version | grep -F "0.27.1"
       - name: Check source
         run: futhark check -w futhark/identity_witness.fut
       - name: Run CPU witness
@@ -77,6 +74,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify CUDA host
         run: nvidia-smi
+      - name: Load pinned toolchain
+        run: cat toolchain/futhark.env >> "$GITHUB_ENV"
       - name: Install host prerequisites
         run: sudo apt-get update && sudo apt-get install -y ca-certificates xz-utils
       - name: Install pinned Futhark
