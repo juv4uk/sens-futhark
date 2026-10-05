@@ -15,6 +15,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PROGRAM = ROOT / "futhark" / "compiler_structural.fut"
 
+# These are provenance facts, not semantic meaning. They change only when the
+# upstream compiler-authority bundle changes.
+EXPECTED_SOURCE_COMMIT = "08db33ced8643aedaa7de35cb61407900c0b0c05"
+EXPECTED_ROLE_AUTHORITY_DIGEST = "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9"
+
 ROLE_TO_ENTRY = {
     "PairConstruct": "lower_pair_construct",
     "SelectorHead": "lower_selector_head",
@@ -39,16 +44,26 @@ def load_request(path: Path) -> dict:
 
     if data.get("schema") != "sens-futhark/compiler-backend/v1":
         raise ContractError("unsupported compiler-backend schema")
+
     provenance = data.get("provenance")
     if not isinstance(provenance, dict):
         raise ContractError("missing provenance")
     if provenance.get("source_repository") != "juv4uk/sens":
         raise ContractError("unexpected semantic authority repository")
+
     commit = provenance.get("source_commit", "")
     if not isinstance(commit, str) or len(commit) != 40:
         raise ContractError("invalid source_commit")
+    if commit != EXPECTED_SOURCE_COMMIT:
+        raise ContractError("stale provenance: source_commit is not the pinned SENS compiler point")
+
     if provenance.get("contract") != "11.6":
         raise ContractError("unsupported SENS contract")
+
+    authority = provenance.get("role_authority_digest", "")
+    if authority != EXPECTED_ROLE_AUTHORITY_DIGEST:
+        raise ContractError("stale provenance: role_authority_digest does not match the pinned SENS authority")
+
     role = data.get("role")
     if role not in {
         "QuoteForm", "AtomPredicate", "SelectorTail", "SelectorHead",
