@@ -19,6 +19,8 @@ jobs:
   toolchain-download:
     name: Futhark download and checksum
     runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - name: Load pinned toolchain
