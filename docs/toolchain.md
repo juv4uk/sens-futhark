@@ -11,9 +11,9 @@ The compiler is installed repo-locally under `.tools/`; no system-wide Futhark i
 ## Bootstrap
 
 ```bash
-./tools/install-futhark.sh
-./tools/probe-gpu.sh
-./tools/smoke-opencl.sh
+make bootstrap
+make probe
+make smoke-opencl
 ```
 
 ## Backend order
