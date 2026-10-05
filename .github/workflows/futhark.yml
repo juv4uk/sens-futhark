@@ -38,7 +38,7 @@ jobs:
           test -n "$bin"
           prefix="$(dirname "$(dirname "$bin")")"
           rm -rf "$HOME/.local/futhark"
-          cp -a "$prefix" "$HOME/.local/futhark"
+          cp -a "$prefix/." "$HOME/.local/futhark/"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
       - name: Verify Futhark
         run: futhark --version | grep -F "$FUTHARK_VERSION"
@@ -68,7 +68,7 @@ jobs:
           test -n "$bin"
           prefix="$(dirname "$(dirname "$bin")")"
           rm -rf "$HOME/.local/futhark"
-          cp -a "$prefix" "$HOME/.local/futhark"
+          cp -a "$prefix/." "$HOME/.local/futhark/"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
       - name: Verify Futhark
         run: futhark --version | grep -F "$FUTHARK_VERSION"
@@ -116,7 +116,7 @@ jobs:
           test -n "$bin"
           prefix="$(dirname "$(dirname "$bin")")"
           rm -rf "$HOME/.local/futhark"
-          cp -a "$prefix" "$HOME/.local/futhark"
+          cp -a "$prefix/." "$HOME/.local/futhark/"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
       - name: Verify Futhark
         run: futhark --version | grep -F "$FUTHARK_VERSION"
