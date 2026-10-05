@@ -11,7 +11,7 @@ permissions:
 
 # Only the newest GPU request for a ref may occupy the single physical card.
 concurrency:
-  group: sens-futhark-gpu-only-${{ github.ref }}
+  group: sens-futhark-gpu-only
   cancel-in-progress: true
 
 jobs:
