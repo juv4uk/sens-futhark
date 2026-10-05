@@ -5,8 +5,9 @@ FIXTURE_DESTINATION ?= fixtures/imported
 CPU_WITNESS ?= host/cpu_witness.py
 PARITY_RUNNER ?= host/parity.py
 BACKEND_WITNESS ?=
+ARGS ?=
 
-.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity
+.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-cli sens-cli-parity verify-sens-pin
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -57,3 +58,12 @@ witness-parity:
 	@test -n "$(BACKEND_WITNESS)" || { echo "BACKEND_WITNESS is required; absent backend output is not GPU parity." >&2; exit 2; }
 	@test -f "$(BACKEND_WITNESS)" || { echo "BACKEND_WITNESS does not exist: $(BACKEND_WITNESS)" >&2; exit 2; }
 	@reference=$$(mktemp); trap 'rm -f "$$reference"' EXIT; python3 "$(CPU_WITNESS)" --fixture "$(FIXTURE_DESTINATION)/identity_vectors.csv" > "$$reference" && python3 "$(PARITY_RUNNER)" --reference "$$reference" --backend "$(BACKEND_WITNESS)"
+
+verify-sens-pin:
+	bash tools/verify-sens-source-pin.sh
+
+sens-cli:
+	bash tools/sens-cli.sh $(ARGS)
+
+sens-cli-parity:
+	bash tools/smoke-sens-cli-parity.sh
