@@ -23,6 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Host-control invariant (#82): one physical card => one scheduler (cml#472).
+      - name: Prove single GPU lane
+        run: bash tools/check-gpu-single-lane.sh
+
       # Host-control step only: prepares the compiler used to launch CUDA work.
       - name: Install pinned Futhark
         run: make bootstrap
