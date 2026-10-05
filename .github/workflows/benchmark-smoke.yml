@@ -12,7 +12,7 @@ permissions:
 jobs:
   smoke:
     runs-on: [self-hosted, Linux, X64, sens-futhark]
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -20,23 +20,26 @@ jobs:
         run: make bootstrap
 
       - name: Check benchmark harness
-        run: python3 -m py_compile bench/run.py
+        run: |
+          python3 -m py_compile bench/run.py
+          python3 -m py_compile bench/summarize.py
 
-      - name: Run calibration benchmark
+      - name: Run crossover benchmark
         env:
           FUTHARK: ${{ github.workspace }}/.tools/bin/futhark
           CUDA_HOME: /usr/local/cuda-12.6
         run: |
           python3 bench/run.py \
-            --sizes 256,4096,65536,1048576 \
+            --sizes 1048576,2097152,4194304,8388608 \
             --runs 5 \
-            --cold-runs 3 \
+            --cold-runs 2 \
             --out bench/results/smoke
+          python3 bench/summarize.py bench/results/smoke | tee bench/results/smoke/summary.txt
 
       - name: Show benchmark evidence
         if: always()
         run: |
-          for f in metadata.json c.json cuda.json cuda.profile.log; do
+          for f in metadata.json summary.json summary.txt; do
             if [ -f "bench/results/smoke/$f" ]; then
               echo "===== $f ====="
               cat "bench/results/smoke/$f"
