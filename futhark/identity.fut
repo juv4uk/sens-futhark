@@ -19,7 +19,7 @@ def current_domain (domain: i32): bool =
   domain >= 1 && domain <= 7
 
 entry validate_current (domain: i32) (bits: i32): bool =
-  if !current_domain domain
+  if not (current_domain domain)
   then false
   else bits >= 0 && bits < limit domain
 
