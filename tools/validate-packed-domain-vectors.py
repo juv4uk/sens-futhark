@@ -6,7 +6,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-FIXTURE = Path(__file__).with_name("packed-domain-vectors.json")
+FIXTURE = Path(__file__).resolve().parents[1] / "tests" / "packed-domain-vectors.json"
 
 def exact_bytes(words):
     bits="".join(words)
