@@ -16,6 +16,15 @@ from __future__ import annotations
 
 import numpy as np
 
+try:
+    from host.arena_layout import NODE_FIELDS
+except ImportError:  # running as a script
+    import pathlib
+    import sys
+
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    from host.arena_layout import NODE_FIELDS
+
 FREE, ATOM, PAIR = 0, 1, 2
 
 
@@ -112,7 +121,7 @@ class Arena:
 
         Returns (new_roots, live_count). Frees the tail for reuse.
         """
-        live = sorted(self.mark(roots))
+        live = sorted(self.make(roots))
         remap = {old: new for new, old in enumerate(live)}
         for new, old in enumerate(live):
             if new != old:
@@ -135,3 +144,30 @@ class Arena:
 
     def spare_bytes(self) -> int:
         return (self.capacity - self.high_water) * self.node_bytes
+
+    # ---- host -> device packing ------------------------------------
+    def to_buffers(self) -> dict:
+        """The SoA buffers exactly as the device receives them (flat, packed)."""
+        return {
+            "fields": tuple(name for name, *_ in NODE_FIELDS),
+            "tag": self.tag,
+            "domain": self.domain,
+            "left": self.left,
+            "right": self.right,
+            "value": self.value,
+            "capacity": self.capacity,
+            "high_water": self.high_water,
+            "node_bytes": self.node_bytes,
+        }
+
+    @classmethod
+    def from_buffers(cls, bufs: dict) -> "Arena":
+        a = cls(int(bufs["capacity"]), node_bytes=int(bufs.get("node_bytes", 24)))
+        a.tag = np.array(bufs["tag"], dtype=np.uint8)
+        a.domain = np.array(bufs["domain"], dtype=np.uint32)
+        a.left = np.array(bufs["left"], dtype=np.uint32)
+        a.right = np.array(bufs["right"], dtype=np.uint32)
+        a.value = np.array(bufs["value"], dtype=np.int64)
+        a.high_water = int(bufs["high_water"])
+        a._free = [i for i in range(a.capacity - 1, -1, -1) if a.tag[i] == FREE]
+        return a
