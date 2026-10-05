@@ -36,3 +36,13 @@ def layout(fields=NODE_FIELDS) -> dict:
     max_align = max(align for _n, _t, _s, align in fields)
     struct = _align_up(offset, max_align)
     return {"offsets": offsets, "packed_bytes": packed, "struct_bytes": struct}
+
+
+def block_offsets(fields=NODE_FIELDS, capacity: int = 1) -> dict:
+    """Byte offsets of each SoA block in the concatenated DMA payload."""
+    off = 0
+    offsets = {}
+    for name, _type, size, _align in fields:
+        offsets[name] = off
+        off += size * capacity
+    return {"offsets": offsets, "total_bytes": off}
