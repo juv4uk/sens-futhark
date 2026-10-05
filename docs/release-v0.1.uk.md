@@ -5,6 +5,8 @@
 `sens-futhark` — **substrate** (witness / GPU acceleration), не друга реалізація мови.
 Канонічна мова — pinned `juv4uk/sens` (`release/sens-source.pin`).
 
+**Tip (код шляху мови):** `c792c4b` — pin + `tools/sens-cli.sh` + parity smoke + цей guide.
+
 ## Один шлях: мова (без GPU)
 
 ```bash
@@ -30,7 +32,7 @@ make test-identity-cuda # потребує host CUDA 12.6 + runner labels
 ## Evidence manifest (заповнити після green run)
 
 ```text
-repo_sha=
+repo_sha=c792c4b4e62b1a71b93b8eda2570bcd61a59d5e8
 sens_pin=a4a83f2a879797bd431bd9896a52b707d7df7d53
 futhark_version=0.27.1
 cuda_toolkit=12.6
@@ -41,16 +43,18 @@ run_url=
 date=
 ```
 
+Порожні `cpu_witness` / `cuda_witness` / `run_url` означають: **tag v0.1 ще не готовий** (#34).
+
 ## Статуси (чесні межі)
 
 | статус | предмет |
 |--------|----------|
-| **CONFIRMED** | pin + entrypoint path; CPU identity witness (коли CI green) |
-| **CONFIRMED\*** | CUDA identity на named self-hosted runner (коли green) |
+| **CONFIRMED** | pin + entrypoint path на main |
+| **PENDING** | CPU/CUDA identity witness — live green run URL на self-hosted |
 | **BLOCKED** | OpenCL на поточному WSL host (`clGetPlatformIDs` −1001) |
 | **UNRESOLVED** | canonical upstream fixture import (#31 / sens#3560) |
 
-\* GPU — host-provided; Guix покриває CPU/import, не vendor CUDA.
+GPU — host-provided; Guix покриває CPU/import, не vendor CUDA.
 
 ## Non-claim
 

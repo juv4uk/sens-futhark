@@ -13,6 +13,19 @@ Backend отримує вже визначену identity `(domain, exact bits)`
 За Contract 11.6 D1–D7 є current domains; D8 — research і тут fail-closed.
 Однаковий payload у різних domains лишається різною identity.
 
+## Канонічна мова (без GPU)
+
+Pinned upstream + entrypoint — не друга реалізація:
+
+```sh
+bash tools/verify-sens-source-pin.sh
+# vendor/sens @ SHA з release/sens-source.pin
+make sens-cli ARGS='release/smoke/hello.lisp'
+make sens-cli-parity
+```
+
+Деталі: [docs/sens-cli-entrypoint.uk.md](docs/sens-cli-entrypoint.uk.md), [docs/release-v0.1.uk.md](docs/release-v0.1.uk.md).
+
 ## Докази та межі
 
 CUDA witness на self-hosted GTX 1050 Ti з CUDA 12.6 уже зафіксовано як
