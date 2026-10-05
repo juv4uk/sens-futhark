@@ -21,6 +21,7 @@ SOURCE_REPOSITORY = "juv4uk/sens"
 PAYLOAD_NAME = "identity_vectors.csv"
 CSV_HEADER = ("domain", "width", "bits", "exact_text")
 COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+SUPPORTED_CONTRACT_VERSIONS = ("11.6",)
 
 
 class BundleError(ValueError):
@@ -61,6 +62,8 @@ def _validate_manifest(manifest: dict[str, object]) -> tuple[str, str, str]:
     if not COMMIT_RE.fullmatch(source_commit):
         raise BundleError("source_commit must be a lowercase 40-hex Git SHA")
     contract_version = _require_string(manifest, "contract_version")
+    if contract_version not in SUPPORTED_CONTRACT_VERSIONS:
+        raise BundleError(f"unsupported contract_version: {contract_version!r}")
     if _require_string(manifest, "payload") != PAYLOAD_NAME:
         raise BundleError(f"schema v1 payload must be {PAYLOAD_NAME!r}")
     digest = _require_string(manifest, "payload_sha256")

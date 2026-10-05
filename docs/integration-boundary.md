@@ -29,7 +29,8 @@ authority.
 
 Unknown schema, чужий source repository, invalid commit/digest, altered CSV,
 duplicate identity або malformed header зупиняють import до CPU чи backend
-execution. Немає fallback на локальний CSV.
+execution. Schema v1 зараз pin-ить Contract `11.6`; інша версія зупиняє
+import до явного backend update. Немає fallback на локальний CSV.
 
 Upstream export ще має бути створений у межах
 [sens#3560](https://github.com/juv4uk/sens/issues/3560). Отже

@@ -78,6 +78,17 @@ class ImportBundleTests(unittest.TestCase):
             with self.assertRaises(import_sens_fixture.BundleError):
                 import_sens_fixture.import_bundle(source, root / "destination")
 
+    def test_rejects_unpinned_contract_version(self) -> None:
+        """Accepting an older contract would silently mix incompatible witness facts."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "source"
+            source.mkdir()
+            write_bundle(source, contract_version="11.5")
+
+            with self.assertRaises(import_sens_fixture.BundleError):
+                import_sens_fixture.import_bundle(source, root / "destination")
+
     def test_rejects_non_sens_source_repository(self) -> None:
         """A similarly shaped bundle from another repository is not canonical SENS input."""
         with tempfile.TemporaryDirectory() as directory:
