@@ -73,6 +73,7 @@ jobs:
             make smoke-cuda
             make test-identity-cuda
             make test-packed-domain-cuda
+            make test-compiler-backend-cuda
           '
 
       - name: Publish CUDA evidence metadata

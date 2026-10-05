@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SENS-Futhark compiler backend request v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "provenance", "role", "admission", "payload"],
+  "properties": {
+    "schema": {"const": "sens-futhark/compiler-backend/v1"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_repository", "source_commit", "contract", "role_authority_digest"],
+      "properties": {
+        "source_repository": {"const": "juv4uk/sens"},
+        "source_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "contract": {"const": "11.6"},
+        "role_authority_digest": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "QuoteForm", "AtomPredicate", "SelectorTail", "SelectorHead",
+        "AtomEquality", "CondForm", "PairConstruct", "LambdaForm", "DefineForm"
+      ]
+    },
+    "admission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gpu", "mechanism"],
+      "properties": {
+        "gpu": {"const": true},
+        "mechanism": {"type": "string", "minLength": 1}
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["left", "right"],
+      "properties": {
+        "left": {"type": "array", "items": {"type": "integer"}},
+        "right": {"type": "array", "items": {"type": "integer"}}
+      }
+    }
+  }
+}
