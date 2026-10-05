@@ -1,0 +1,13 @@
+{
+  "name": "GTX 1050 Ti (GP107)",
+  "arch": "Pascal",
+  "compute_capability": "6.1",
+  "sm_count": 6,
+  "cuda_cores": 768,
+  "vram_total_bytes": 4294967296,
+  "reserved_bytes": 1073741824,
+  "bandwidth_bytes_per_s": 112000000000,
+  "node_bytes": 24,
+  "tdr_ms": 2000,
+  "display_class": true
+}
