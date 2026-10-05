@@ -1,0 +1,39 @@
+name: benchmark-smoke
+
+on:
+  push:
+    branches:
+      - agent/chatgpt-sol/5-benchmark-harness-main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, Linux, X64, sens-futhark]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap Futhark
+        run: make bootstrap
+
+      - name: Check benchmark harness
+        run: python3 -m py_compile bench/run.py
+
+      - name: Run calibration benchmark
+        env:
+          FUTHARK: ${{ github.workspace }}/.tools/bin/futhark
+          CUDA_HOME: /usr/local/cuda-12.6
+        run: |
+          python3 bench/run.py \
+            --sizes 256,4096,65536 \
+            --runs 3 \
+            --cold-runs 2 \
+            --out bench/results/smoke
+
+      - name: Show metadata
+        if: always()
+        run: |
+          test ! -f bench/results/smoke/metadata.json || cat bench/results/smoke/metadata.json
