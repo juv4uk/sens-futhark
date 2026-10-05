@@ -19,13 +19,10 @@ jobs:
           echo "os=$RUNNER_OS"
           uname -a
 
-      - name: Ensure OpenCL build dependencies
+      - name: Verify OpenCL build dependencies
         run: |
-          if [ ! -f /usr/include/CL/cl.h ] || ! command -v clinfo >/dev/null 2>&1; then
-            sudo -n apt-get update -qq
-            sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y ocl-icd-opencl-dev clinfo
-          fi
           test -f /usr/include/CL/cl.h
+          command -v clinfo
           clinfo -l || true
 
       - name: Bootstrap pinned Futhark
