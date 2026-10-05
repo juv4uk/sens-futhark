@@ -1,29 +1,54 @@
 # sens-futhark
 
-Experimental GPU host/backend for SENS using Futhark.
+Експериментальний GPU host/backend для SENS через Futhark.
 
-## Boundary
+## Межа влади
 
-`sens-futhark` is a **substrate**, not a semantic authority.
+`sens-futhark` є **execution substrate**, а не семантичною владою. Мова,
+domains і semantic laws належать [`juv4uk/sens`](https://github.com/juv4uk/sens).
+Backend отримує вже визначену identity `(domain, exact bits)` і не може
+відновлювати значення з machine width, текстового імені чи legacy
+`Sens8`/`Function8` table.
 
-The semantic source of truth remains [`juv4uk/sens`](https://github.com/juv4uk/sens). The backend receives an already-qualified SENS identity:
+За Contract 11.6 D1–D7 є current domains; D8 — research і тут fail-closed.
+Однаковий payload у різних domains лишається різною identity.
 
-```text
-(domain, exact bits)
+## Докази та межі
+
+CUDA witness на self-hosted GTX 1050 Ti з CUDA 12.6 уже зафіксовано як
+execution evidence. OpenCL loader на WSL2 наявний, але OpenCL platform
+**відсутня** (`clGetPlatformIDs … -1001`), тому OpenCL не заявляється
+робочим backend-ом. CPU self-comparison або synthetic fixture не є GPU parity.
+
+## Import і witness
+
+Локальний CSV не є канонічним джерелом. `sens-futhark` приймає лише
+versioned bundle від `juv4uk/sens` із source commit, contract version і
+SHA-256 payload. До появи upstream export live import чесно заблокований;
+`fixtures/example/` доводить тільки importer protocol.
+
+```sh
+make import-fixture SENS_FIXTURE_SOURCE=/шлях/до/sens-bundle
+make witness-cpu
+make witness-parity BACKEND_WITNESS=/шлях/до/backend-witness.txt
 ```
 
-The domain fixes the semantic width. Physical storage may use a wider machine type for GPU efficiency, but physical width never creates or changes SENS meaning.
+Відсутній fixture, runner або backend output є помилкою, не доказом
+паритету. Деталі: [docs/integration-boundary.md](docs/integration-boundary.md).
 
-Current policy follows SENS Contract 11.6:
+## Guix
 
-- D1-D7 are current semantic domains.
-- D8 is research-only and must fail closed in this backend until separately ratified.
-- Equal payloads in different domains remain different identities (`1`, `01`, `001`, ...).
-- No legacy `Sens8` / `Function8` lookup is allowed in the canonical path.
-- Futhark performs mechanism only; semantic laws remain owned by SENS.
+```sh
+./guix/run dev -- python3 host/cpu_witness.py --self-test
+./guix/run futhark -- make check-identity
+```
 
-## Initial slice
+Guix описує лише відтворюване CPU/import середовище. Futhark і CUDA на WSL є
+optional host-provided capability; Guix profile не гарантує ні device, ні
+semantic admission. Деталі: [guix/README.uk.md](guix/README.uk.md).
 
-The first implementation lane establishes the exact-identity boundary and a tiny Futhark validator. CPU and GPU witnesses will later consume the same vectors and compare semantic observations, not backend-specific representations.
+## Ліцензія
 
-See [`docs/canonical-boundary.md`](docs/canonical-boundary.md) and issue [#9](https://github.com/juv4uk/sens-futhark/issues/9).
+Власна юридично віддільна робота цього репозиторію поширюється під
+[ВОЛЬНІСТЮ](LICENSE). Сторонні інструменти, зокрема Futhark, зберігають свої
+власні умови та provenance.
