@@ -112,4 +112,4 @@ entry synthetic_256_checksum: i64 =
 -- ==
 -- entry: synthetic_256_checksum
 -- input { }
--- output 5559680i64
+-- output { 5559680i64 }
