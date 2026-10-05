@@ -5,72 +5,158 @@
   "cases": [
     {
       "id": "canonical-10-001-01",
-      "source_words": ["10", "001", "01"],
-      "widths": [2, 3, 2],
+      "source_words": [
+        "10",
+        "001",
+        "01"
+      ],
+      "widths": [
+        2,
+        3,
+        2
+      ],
       "payload_bits": "1000101",
       "bit_len": 7,
-      "packed_bytes_hex": ["8a"],
+      "packed_bytes_hex": [
+        "8a"
+      ],
       "roundtrip_required": true
     },
     {
       "id": "same-value-different-widths",
-      "source_words": ["1", "01", "001", "0001"],
-      "widths": [1, 2, 3, 4],
+      "source_words": [
+        "1",
+        "01",
+        "001",
+        "0001"
+      ],
+      "widths": [
+        1,
+        2,
+        3,
+        4
+      ],
       "payload_bits": "1010010001",
       "bit_len": 10,
-      "packed_bytes_hex": ["a4", "40"],
+      "packed_bytes_hex": [
+        "a4",
+        "40"
+      ],
       "roundtrip_required": true
     },
     {
       "id": "cross-byte-word",
-      "source_words": ["1111111", "101"],
-      "widths": [7, 3],
+      "source_words": [
+        "1111111",
+        "101"
+      ],
+      "widths": [
+        7,
+        3
+      ],
       "payload_bits": "1111111101",
       "bit_len": 10,
-      "packed_bytes_hex": ["ff", "40"],
+      "packed_bytes_hex": [
+        "ff",
+        "40"
+      ],
       "roundtrip_required": true
     },
     {
       "id": "all-widths-dense",
-      "source_words": ["1", "10", "101", "1010", "10101", "101010", "1010101", "10101010"],
-      "widths": [1, 2, 3, 4, 5, 6, 7, 8],
-      "payload_bits": "110101101010101010101101010101010101",
+      "source_words": [
+        "1",
+        "10",
+        "101",
+        "1010",
+        "10101",
+        "101010",
+        "1010101",
+        "10101010"
+      ],
+      "widths": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "payload_bits": "110101101010101101010101010110101010",
       "bit_len": 36,
-      "packed_bytes_hex": ["d6", "ab", "55", "5a", "a0"],
+      "packed_bytes_hex": [
+        "d6",
+        "ab",
+        "55",
+        "5a",
+        "a0"
+      ],
       "roundtrip_required": true
     }
   ],
   "negative_cases": [
     {
       "id": "invalid-width-zero",
-      "widths": [0, 3, 2],
+      "widths": [
+        0,
+        3,
+        2
+      ],
       "expected": "reject"
     },
     {
       "id": "invalid-width-nine",
-      "widths": [2, 9],
+      "widths": [
+        2,
+        9
+      ],
       "expected": "reject"
     },
     {
       "id": "wrong-total-width",
-      "source_words": ["10", "001", "01"],
-      "widths": [2, 3],
+      "source_words": [
+        "10",
+        "001",
+        "01"
+      ],
+      "widths": [
+        2,
+        3
+      ],
       "bit_len": 7,
       "expected": "reject"
     },
     {
       "id": "nonzero-tail-slack",
       "bit_len": 7,
-      "packed_bytes_hex": ["8b"],
-      "widths": [2, 3, 2],
+      "packed_bytes_hex": [
+        "8b"
+      ],
+      "widths": [
+        2,
+        3,
+        2
+      ],
       "expected": "reject"
     },
     {
       "id": "width-boundary-ambiguous",
-      "source_words_a": ["0", "00"],
-      "source_words_b": ["000"],
-      "widths_a": [1, 2],
-      "widths_b": [3],
+      "source_words_a": [
+        "0",
+        "00"
+      ],
+      "source_words_b": [
+        "000"
+      ],
+      "widths_a": [
+        1,
+        2
+      ],
+      "widths_b": [
+        3
+      ],
       "same_packed_payload_allowed": true,
       "expected": "preserve-schedule-distinction"
     }
