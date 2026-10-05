@@ -24,4 +24,4 @@ entry equal_samples
 -- ==
 -- entry: equal_samples
 -- input { [1,3,3,7] [1,1,7,42] [3,3,3,7] [1,1,7,42] }
--- output { [false,false,true,true] }
+-- output { [false,true,true,true] }
