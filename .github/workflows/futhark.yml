@@ -16,9 +16,38 @@ permissions:
   contents: read
 
 jobs:
-  cpu-check:
-    name: Futhark CPU source check
+  toolchain:
+    name: Futhark toolchain
     runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load pinned toolchain
+        run: cat toolchain/futhark.env >> "$GITHUB_ENV"
+      - name: Install host prerequisites
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates gcc xz-utils
+      - name: Download and verify Futhark archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/futhark"
+          url="$FUTHARK_RELEASE_BASE_URL/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz"
+          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
+          tar -tJf "$RUNNER_TEMP/futhark.tar.xz" | head -n 5
+      - name: Verify Futhark binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/futhark/extract"
+          tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark/extract"
+          bin="$(find "$RUNNER_TEMP/futhark/extract" -type f -path '*/bin/futhark' -print -quit)"
+          test -n "$bin"
+          "$bin" --version | grep -F "$FUTHARK_VERSION"
+
+  syntax:
+    name: Futhark syntax check
+    runs-on: ubuntu-24.04
+    needs: toolchain
     steps:
       - uses: actions/checkout@v4
       - name: Load pinned toolchain
@@ -37,18 +66,42 @@ jobs:
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
           test -n "$bin"
           prefix="$(dirname "$(dirname "$bin")")"
-          rm -rf "$HOME/.local/futhark"
           cp -a "$prefix/." "$HOME/.local/futhark/"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
-      - name: Verify Futhark
-        run: futhark --version | grep -F "$FUTHARK_VERSION"
-      - name: Check source
+      - name: Check syntax
+        run: futhark check-syntax futhark/identity_witness.fut
+
+  type-check:
+    name: Futhark type check
+    runs-on: ubuntu-24.04
+    needs: syntax
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load pinned toolchain
+        run: cat toolchain/futhark.env >> "$GITHUB_ENV"
+      - name: Install host prerequisites
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates gcc xz-utils
+      - name: Install pinned Futhark
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
+          url="$FUTHARK_RELEASE_BASE_URL/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz"
+          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
+          bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
+          test -n "$bin"
+          prefix="$(dirname "$(dirname "$bin")")"
+          cp -a "$prefix/." "$HOME/.local/futhark/"
+          echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
+      - name: Type check source
         run: futhark check -w futhark/identity_witness.fut
 
   cpu-witness:
     name: Futhark CPU witness
     runs-on: ubuntu-24.04
-    needs: cpu-check
+    needs: type-check
     steps:
       - uses: actions/checkout@v4
       - name: Load pinned toolchain
@@ -67,11 +120,8 @@ jobs:
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
           test -n "$bin"
           prefix="$(dirname "$(dirname "$bin")")"
-          rm -rf "$HOME/.local/futhark"
           cp -a "$prefix/." "$HOME/.local/futhark/"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
-      - name: Verify Futhark
-        run: futhark --version | grep -F "$FUTHARK_VERSION"
       - name: Run CPU witness
         run: futhark test --backend=c futhark/identity_witness.fut
       - name: Publish CPU evidence metadata
@@ -115,11 +165,8 @@ jobs:
           bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
           test -n "$bin"
           prefix="$(dirname "$(dirname "$bin")")"
-          rm -rf "$HOME/.local/futhark"
           cp -a "$prefix/." "$HOME/.local/futhark/"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
-      - name: Verify Futhark
-        run: futhark --version | grep -F "$FUTHARK_VERSION"
       - name: Check source
         run: futhark check -w futhark/identity_witness.fut
       - name: Run CUDA witness
