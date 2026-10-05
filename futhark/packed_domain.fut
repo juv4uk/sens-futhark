@@ -26,7 +26,11 @@ def request_valid (bytes: []i64) (bit_len: i64) (offset: i64) (width: i64): bool
   && offset >= 0i64
   && width >= 1i64
   && width <= 8i64
-  && offset + width <= bit_len
+  && offset <= bit_len - width
+  && bytes[offset / 8i64] >= 0i64
+  && bytes[offset / 8i64] <= 255i64
+  && bytes[(offset + width - 1i64) / 8i64] >= 0i64
+  && bytes[(offset + width - 1i64) / 8i64] <= 255i64
 
 def read_exact (bytes: []i64) (offset: i64) (width: i64): i64 =
   loop value = 0i64 for i < width do
@@ -37,6 +41,9 @@ def read_exact (bytes: []i64) (offset: i64) (width: i64): i64 =
     let bit = (byte_value >>> (7i64 - bit_index)) & 1i64
     in (value << 1i64) | bit
 
+def current_request_valid (bytes: []i64) (bit_len: i64) (offset: i64) (width: i64): bool =
+  request_valid bytes bit_len offset width && width <= 7i64
+
 def decode_one (bytes: []i64) (bit_len: i64) (offset: i64) (width: i64): i64 =
   if request_valid bytes bit_len offset width
   then read_exact bytes offset width
@@ -45,7 +52,7 @@ def decode_one (bytes: []i64) (bit_len: i64) (offset: i64) (width: i64): i64 =
 entry validate_batch
     (bytes: []i64) (bit_len: i64)
     (offsets: []i64) (widths: []i64): []bool =
-  map (\p -> request_valid bytes bit_len p.0 p.1) (zip offsets widths)
+  map (\p -> current_request_valid bytes bit_len p.0 p.1) (zip offsets widths)
 
 entry decode_batch
     (bytes: []i64) (bit_len: i64)
