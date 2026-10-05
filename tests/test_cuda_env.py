@@ -17,7 +17,16 @@ CUDA_ENV = ROOT / "tools" / "cuda-env.sh"
 
 def run_cuda_env(*arguments: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     merged = os.environ.copy()
+    # Host-specific CUDA overrides must not leak into synthetic contract cases.
     if env:
+        for key in (
+            "CUDA_HOME",
+            "CUDA_PATH",
+            "CUDA_INCLUDE",
+            "CUDA_TOOLKIT_LIB",
+            "CUDA_DRIVER_LIB",
+        ):
+            merged.pop(key, None)
         merged.update(env)
     return subprocess.run(
         ["bash", str(CUDA_ENV), *arguments],
