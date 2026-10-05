@@ -30,7 +30,7 @@ make test-identity-cuda   # self-hosted CUDA only
 
 | job | runs-on | status |
 |-----|---------|--------|
-| CPU reference witness (`cpu-witness.yml`) | **ubuntu-24.04** (#75) | незалежний від GPU-раннера |
+| CPU reference witness (`cpu-witness.yml`) | **ubuntu-24.04** (#75) | маршрут відв’язаний від GPU; live green ще очікується |
 | Futhark CUDA / GPU smoke | self-hosted `sens-futhark` | чекає #69 host recovery |
 | OpenCL | — | **BLOCKED** −1001 |
 
@@ -43,14 +43,14 @@ make release-evidence
 Заповнюйте `cpu_witness` / `cuda_witness` / `run_url` **лише** після live green runs.
 Порожні поля ⇒ **не** різати tag (#34).
 
-Після #75 CPU run URL можна брати з GitHub Actions на `ubuntu-24.04` (не self-hosted).
+Після #75 CPU run URL можна занести в evidence **лише після першого live green** на `ubuntu-24.04`; сам факт зміни `runs-on` не є доказом виконання.
 
 ## Статуси
 
 | статус | предмет |
 |--------|----------|
-| **CONFIRMED** | pin + entrypoint; CPU CI decoupled from GPU host |
-| **PENDING** | live CPU/CUDA run_url у manifest |
+| **CONFIRMED** | pin + entrypoint; конфігураційно CPU CI відв’язаний від GPU host |
+| **PENDING** | перший live green CPU на `ubuntu-24.04`; live CUDA run; run_url у manifest |
 | **BLOCKED** | OpenCL WSL (−1001); CUDA self-hosted until #69 recovery |
 | **UNRESOLVED** | upstream fixture import (#31 / sens#3560) |
 
