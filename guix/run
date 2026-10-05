@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+GUIX="${GUIX:-guix}"
+role="${1:-}"
+
+usage() { echo "Використання: ./guix/run <dev|futhark> -- команда [аргументи]" >&2; }
+case "$role" in dev|futhark) ;; *) usage; exit 2 ;; esac
+shift
+[[ ${1:-} == -- ]] && shift
+[[ $# -gt 0 ]] || { usage; exit 2; }
+
+# `futhark` дозволяє repo-local/host toolchain, але CUDA лишається host capability.
+exec "$GUIX" shell --pure -m "$ROOT/manifest.scm" -- "$@"
