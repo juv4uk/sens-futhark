@@ -1,0 +1,13 @@
+# SENS execution-conformance upstream pin
+# Source: juv4uk/sens main, queried 2026-10-05
+SENS_REPOSITORY=juv4uk/sens
+SENS_COMMIT=a4a83f2a879797bd431bd9896a52b707d7df7d53
+SENS_CONTRACT=11.6
+SENS_EXECUTION_SCHEMA=sens-execution-conformance/v1
+SENS_CURRENT_DOMAINS=D1,D2,D3,D4,D5,D6,D7
+SENS_RESEARCH_DOMAINS=D8
+
+# Git blob SHAs of the exact upstream files expected by this integration.
+SENS_FILE_1=benchmarks/execution-ladder-conformance/README.md|2320834e8e89e931b128a3e768167f36e3e6ff31
+SENS_FILE_2=benchmarks/execution-ladder-conformance/schema.json|22c1296abd1c7915e189d3f502d4ec8518419db8
+SENS_FILE_3=benchmarks/execution-ladder-conformance/artifacts/bounded-d1-d3.summary.json|55d537a0a427973d6910d8b9e16cb7eb973ebc23
