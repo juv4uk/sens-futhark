@@ -6,3 +6,6 @@ SENS_CONTRACT=11.6
 # Expected local checkout path for release entrypoint (#39)
 SENS_CHECKOUT_PATH=vendor/sens
 # Update procedure: bump SENS_COMMIT only after upstream release decision; never silent float.
+# Pending (#91): the compiler-merge on sens main (#3781/#3786/#3798/#3800) is not yet a
+# completed upstream point, so this pin deliberately stays pre-compiler. Bump it only when
+# the merge lands as a stable point, then re-run tools/verify-sens-source-pin.sh + smoke (#39).
