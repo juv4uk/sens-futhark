@@ -22,17 +22,21 @@ make sens-cli-parity
 ```bash
 make bootstrap
 make check-identity
-make test-identity-cpu
-make test-identity-cuda   # self-hosted CUDA only
+make test-identity-cuda   # єдиний CI-шлях: self-hosted CUDA
 ```
 
-### CI
+`make test-identity-cpu` існує, але це **reference-only** — локальний семантичний референс, а не шлях релізу й не CI-лейн (див. політику нижче).
+
+### CI (GPU-only, #79)
+
+Єдиний воркфлоу — `.github/workflows/futhark.yml` (`GPU-only CUDA witnesses`).
 
 | job | runs-on | status |
 |-----|---------|--------|
-| CPU reference witness (`cpu-witness.yml`) | self-hosted `sens-futhark` | hosted route #75 failed before step 1; чекає #69 listener recovery |
-| Futhark CUDA / GPU smoke | self-hosted `sens-futhark` | чекає #69 host recovery |
+| `CUDA-only witness` (`futhark.yml`) | `[self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]` | **green on main** (run 37377715294) |
 | OpenCL | — | **BLOCKED** −1001 |
+
+CPU-лейни в CI **немає**: `cpu-witness.yml` видалено, а спроба #75 винести CPU на `ubuntu-24.04` впала **до першого кроку** і була відкочена. CUDA недоступна ⇒ job падає **fail-closed**, без фолбеку на `--backend=c`.
 
 ## Evidence manifest
 
@@ -40,18 +44,17 @@ make test-identity-cuda   # self-hosted CUDA only
 make release-evidence
 ```
 
-Заповнюйте `cpu_witness` / `cuda_witness` / `run_url` **лише** після live green runs.
-Порожні поля ⇒ **не** різати tag (#34).
+Manifest заповнюється **з артефактів живого зеленого прогону** (#81), а не руками: скрипт бере `run_url` останнього success-прогону `GPU-only CUDA witnesses` на цьому SHA, читає `evidence/futhark/cuda.env` і ставить `cuda_witness` **лише якщо** `backend=cuda`. Деталі — `docs/release-evidence.uk.md`.
 
-Спроба #75 перенести CPU на `ubuntu-24.04` завершилась failure **до першого step** (#83), тому hosted route не рахується доказом і тимчасово відкочений. CPU run URL заноситься в evidence лише після live green.
+Обов'язкові поля: `repo_sha`, `sens_pin`, `futhark_version`, `cuda_witness`, `run_url`. Порожнє (або `unknown`) ⇒ **fail-closed**, `exit 2` — і **не** різати tag (#34).
 
 ## Статуси
 
 | статус | предмет |
 |--------|----------|
-| **CONFIRMED** | pin + entrypoint; CPU witness семантично не потребує GPU |
-| **PENDING** | live green CPU/CUDA після #69 listener recovery; run_url у manifest |
-| **BLOCKED** | OpenCL WSL (−1001); CUDA self-hosted until #69 recovery |
+| **CONFIRMED** | pin + entrypoint; CUDA witness зелений на main (self-hosted, GTX 1050 Ti) |
+| **REFERENCE** | CPU witness — внутрішній семантичний референс, не delivery-доказ (GPU-only #79) |
+| **BLOCKED** | OpenCL WSL (−1001) |
 | **UNRESOLVED** | upstream fixture import (#31 / sens#3560) |
 
 ## Non-claim
