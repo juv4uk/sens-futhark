@@ -1,0 +1,20 @@
+[Unit]
+Description=GitHub Actions runner — juv4uk/sens-futhark
+Documentation=https://github.com/juv4uk/sens-futhark/issues/69
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=%h/gpu-runners/sens-futhark/.runner
+ConditionPathIsExecutable=%h/gpu-runners/sens-futhark/run.sh
+
+[Service]
+Type=simple
+WorkingDirectory=%h/gpu-runners/sens-futhark
+EnvironmentFile=-%h/gpu-runners/sens-futhark/.env
+ExecStart=%h/gpu-runners/sens-futhark/run.sh
+Restart=always
+RestartSec=10s
+KillSignal=SIGINT
+TimeoutStopSec=120s
+
+[Install]
+WantedBy=default.target
