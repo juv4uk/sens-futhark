@@ -5,8 +5,8 @@
 -- Futhark only implements the physical data movement/structure required by that
 -- mechanism.
 
-entry lower_pair_construct (left: []i32) (right: []i32): [] (i32, i32) =
-  zip left right
+entry lower_pair_construct (left: []i32) (right: []i32): ([]i32, []i32) =
+  (left, right)
 
 entry lower_selector_head (left: []i32): []i32 =
   left
@@ -17,7 +17,7 @@ entry lower_selector_tail (right: []i32): []i32 =
 -- ==
 -- entry: lower_pair_construct
 -- input { [1i32,2i32,3i32] [10i32,20i32,30i32] }
--- output { [(1i32,10i32),(2i32,20i32),(3i32,30i32)] }
+-- output { [1i32,2i32,3i32] [10i32,20i32,30i32] }
 
 -- ==
 -- entry: lower_selector_head
