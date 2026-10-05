@@ -5,12 +5,18 @@ on:
   workflow_dispatch:
 
 jobs:
-  syntax:
+  witness:
     runs-on: [self-hosted, Linux, X64, sens-futhark]
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Futhark
         run: make bootstrap
-      - name: Check Futhark source
+      - name: Check infrastructure smoke
         run: make check
+      - name: Check exact-identity witness source
+        run: make check-identity
+      - name: Run exact-identity witness on CPU
+        run: make test-identity-cpu
+      - name: Run exact-identity witness on CUDA
+        run: make test-identity-cuda
