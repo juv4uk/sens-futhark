@@ -18,12 +18,12 @@ def limit (domain: i32): i32 =
 def current_domain (domain: i32): bool =
   domain >= 1 && domain <= 7
 
-entry validate_current (domain: i32) (bits: i32): bool =
+def validate_current (domain: i32) (bits: i32): bool =
   if not (current_domain domain)
   then false
   else bits >= 0 && bits < limit domain
 
-entry same_identity
+def same_identity
     (domain_a: i32) (bits_a: i32)
     (domain_b: i32) (bits_b: i32): bool =
   domain_a == domain_b && bits_a == bits_b
