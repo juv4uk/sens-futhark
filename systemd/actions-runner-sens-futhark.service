@@ -4,7 +4,7 @@ Documentation=https://github.com/juv4uk/sens-futhark/issues/69
 Wants=network-online.target
 After=network-online.target
 ConditionPathExists=%h/gpu-runners/sens-futhark/.runner
-ConditionPathIsExecutable=%h/gpu-runners/sens-futhark/run.sh
+ConditionFileIsExecutable=%h/gpu-runners/sens-futhark/run.sh
 
 [Service]
 Type=simple
