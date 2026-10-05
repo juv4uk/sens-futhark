@@ -15,10 +15,9 @@ on:
 permissions:
   contents: read
 
-
 jobs:
-  cpu:
-    name: Futhark CPU witness
+  cpu-check:
+    name: Futhark CPU source check
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -41,13 +40,38 @@ jobs:
           rm -rf "$HOME/.local/futhark"
           cp -a "$prefix" "$HOME/.local/futhark"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
-      - name: Verify toolchain
-        run: |
-          set -euo pipefail
-          futhark --version
-          futhark --version | grep -F "0.27.1"
+      - name: Verify Futhark
+        run: futhark --version | grep -F "$FUTHARK_VERSION"
       - name: Check source
         run: futhark check -w futhark/identity_witness.fut
+
+  cpu-witness:
+    name: Futhark CPU witness
+    runs-on: ubuntu-24.04
+    needs: cpu-check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load pinned toolchain
+        run: cat toolchain/futhark.env >> "$GITHUB_ENV"
+      - name: Install host prerequisites
+        run: sudo apt-get update && sudo apt-get install -y ca-certificates gcc xz-utils
+      - name: Install pinned Futhark
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/futhark" "$HOME/.local/futhark"
+          url="$FUTHARK_RELEASE_BASE_URL/futhark-$FUTHARK_VERSION-$FUTHARK_PLATFORM.tar.xz"
+          curl --fail --location --retry 3 "$url" -o "$RUNNER_TEMP/futhark.tar.xz"
+          echo "$FUTHARK_ARCHIVE_SHA256  $RUNNER_TEMP/futhark.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/futhark.tar.xz" -C "$RUNNER_TEMP/futhark"
+          bin="$(find "$RUNNER_TEMP/futhark" -type f -path '*/bin/futhark' -print -quit)"
+          test -n "$bin"
+          prefix="$(dirname "$(dirname "$bin")")"
+          rm -rf "$HOME/.local/futhark"
+          cp -a "$prefix" "$HOME/.local/futhark"
+          echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
+      - name: Verify Futhark
+        run: futhark --version | grep -F "$FUTHARK_VERSION"
       - name: Run CPU witness
         run: futhark test --backend=c futhark/identity_witness.fut
       - name: Publish CPU evidence metadata
@@ -73,10 +97,10 @@ jobs:
     runs-on: [self-hosted, linux, x64, gpu, cuda]
     steps:
       - uses: actions/checkout@v4
-      - name: Verify CUDA host
-        run: nvidia-smi
       - name: Load pinned toolchain
         run: cat toolchain/futhark.env >> "$GITHUB_ENV"
+      - name: Verify CUDA host
+        run: nvidia-smi
       - name: Install host prerequisites
         run: sudo apt-get update && sudo apt-get install -y ca-certificates xz-utils
       - name: Install pinned Futhark
@@ -94,11 +118,8 @@ jobs:
           rm -rf "$HOME/.local/futhark"
           cp -a "$prefix" "$HOME/.local/futhark"
           echo "$HOME/.local/futhark/bin" >> "$GITHUB_PATH"
-      - name: Verify toolchain
-        run: |
-          set -euo pipefail
-          futhark --version
-          futhark --version | grep -F "0.27.1"
+      - name: Verify Futhark
+        run: futhark --version | grep -F "$FUTHARK_VERSION"
       - name: Check source
         run: futhark check -w futhark/identity_witness.fut
       - name: Run CUDA witness
