@@ -1,6 +1,6 @@
 FUTHARK ?= .tools/bin/futhark
 
-.PHONY: bootstrap probe check smoke-opencl
+.PHONY: bootstrap probe check smoke-opencl smoke-cuda
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -13,3 +13,6 @@ check:
 
 smoke-opencl:
 	FUTHARK=$(FUTHARK) bash tools/smoke-opencl.sh
+
+smoke-cuda:
+	FUTHARK=$(FUTHARK) bash tools/smoke-cuda.sh
