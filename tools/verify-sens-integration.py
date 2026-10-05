@@ -46,7 +46,7 @@ def main() -> int:
         fail(f"cannot resolve upstream HEAD: {exc}")
 
     if sha != lock["SENS_COMMIT"]:
-        fail(f"upstream commit mismatch: got {sha}, expected {lock[\"SENS_COMMIT\"]}")
+        fail(f"upstream commit mismatch: got {sha}, expected {lock['SENS_COMMIT']}")
 
     checked = 0
     for key, value in sorted(lock.items()):
