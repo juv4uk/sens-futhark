@@ -28,9 +28,9 @@ test-identity-cpu:
 test-identity-cuda:
 	test -f "$(CUDA_TARGET)/include/cuda.h"
 	CUDA_HOME="$(CUDA_ROOT)" CUDA_PATH="$(CUDA_ROOT)" \
-	CPATH="$(CUDA_TARGET)/include${CPATH:+:$CPATH}" \
-	LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib${LIBRARY_PATH:+:$LIBRARY_PATH}" \
-	LD_LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+	CPATH="$(CUDA_TARGET)/include$${CPATH:+:$$CPATH}" \
+	LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib$${LIBRARY_PATH:+:$$LIBRARY_PATH}" \
+	LD_LIBRARY_PATH="$(CUDA_DRIVER_LIB):$(CUDA_TARGET)/lib$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}" \
 	$(FUTHARK) test --backend=cuda futhark/identity_witness.fut
 
 smoke-opencl:
