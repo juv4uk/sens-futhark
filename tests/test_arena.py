@@ -12,7 +12,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from host.arena import ATOM, PAIR, Arena, ArenaError  # noqa: E402
 from host.arena_budget import budget, load_profile  # noqa: E402
-from host.arena_layout import layout  # noqa: E402
+from host.arena_layout import block_offsets, layout  # noqa: E402
 
 
 class Naive:
@@ -152,6 +152,39 @@ def test_soa_packing_is_tighter():
     )
 
 
+def test_blob_roundtrip_and_size():
+    a = Arena(64)
+    nil = a.alloc_atom(0, domain=0)
+    root = a.alloc_pair(a.alloc_atom(5, domain=1), nil, domain=2)
+    blob = a.to_blob()
+    assert len(blob) == 64 * 21, len(blob)
+    blocks = block_offsets(capacity=64)
+    assert blocks["total_bytes"] == 64 * 21, blocks
+    b = Arena.from_blob(blob, 64)
+    assert naive_equal(to_naive(b, root), to_naive(a, root)), "blob roundtrip lost structure"
+    print(f"ok: blob {len(blob)} B == capacity*21; roundtrip preserved the tree")
+
+
+def test_many_programs_in_one_arena():
+    a = Arena(1024)
+    roots = []
+    for p in range(20):
+        node = a.alloc_atom(p, domain=1)
+        for k in range(5):
+            node = a.alloc_pair(a.alloc_atom(k + p, domain=1), node, domain=2)
+        roots.append(node)
+    before = [to_naive(a, r) for r in roots]
+    # garbage, unreachable from every root
+    for _ in range(100):
+        a.alloc_pair(a.alloc_atom(9, domain=1), roots[0], domain=2)
+
+    new_roots, live = a.compact(roots)
+    assert len(new_roots) == len(roots), "compaction dropped a program root"
+    for r, exp in zip(new_roots, before):
+        assert naive_equal(to_naive(a, r), exp), "a program was corrupted by compaction"
+    print(f"ok: {len(roots)} programs survived compaction in one arena ({live} live nodes)")
+
+
 if __name__ == "__main__":
     test_ops_match_naive()
     test_errors_fail_closed()
@@ -161,4 +194,6 @@ if __name__ == "__main__":
     test_layout_arithmetic()
     test_buffer_roundtrip()
     test_soa_packing_is_tighter()
+    test_blob_roundtrip_and_size()
+    test_many_programs_in_one_arena()
     print("ALL OK")
