@@ -34,11 +34,46 @@ jobs:
           mkdir -p evidence/futhark
           make probe-cuda-json | tee evidence/futhark/cuda-capability.json
 
-      - name: Run CUDA-only workloads
+      - name: Run CUDA-only workloads through CML admission
+        shell: bash
+        env:
+          CML_GPU_ADMISSION_LOCK: /run/cml-gpu-worker/gpu-admission.lock
         run: |
-          make smoke-cuda
-          make test-identity-cuda
-          make test-packed-domain-cuda
+          set -euo pipefail
+          command -v flock >/dev/null 2>&1 || {
+            echo "ERROR: flock is required for shared CML GPU admission" >&2
+            exit 2
+          }
+          lock="$CML_GPU_ADMISSION_LOCK"
+          request_ns="$(date +%s%N)"
+          mkdir -p "$(dirname "$lock")"
+          export ADMISSION_LOCK="$lock"
+          export REQUEST_NS="$request_ns"
+
+          flock -x -w 780 "$lock" bash -c '
+            set -euo pipefail
+            acquired_ns="$(date +%s%N)"
+            wait_ns="$((acquired_ns - REQUEST_NS))"
+            owner="${ADMISSION_LOCK}.owner"
+            printf "repository=%s\nrun_id=%s\njob=%s\ncase_id=%s\nresource_key=%s\nadmission_wait_ns=%s\n" \
+              "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "cuda-only-witness" "futhark-cuda" \
+              "${CML_GPU_RESOURCE_KEY:-cuda:0}" "$wait_ns" > "$owner"
+            trap "rm -f \"$owner\"" EXIT HUP INT TERM
+
+            {
+              echo "repository=$GITHUB_REPOSITORY"
+              echo "run_id=$GITHUB_RUN_ID"
+              echo "job=cuda-only-witness"
+              echo "case_id=futhark-cuda"
+              echo "resource_key=${CML_GPU_RESOURCE_KEY:-cuda:0}"
+              echo "admission_lock=$ADMISSION_LOCK"
+              echo "admission_wait_ns=$wait_ns"
+            } > evidence/futhark/admission.env
+
+            make smoke-cuda
+            make test-identity-cuda
+            make test-packed-domain-cuda
+          '
 
       - name: Publish CUDA evidence metadata
         shell: bash
@@ -61,3 +96,4 @@ jobs:
           path: |
             evidence/futhark/cuda.env
             evidence/futhark/cuda-capability.json
+            evidence/futhark/admission.env
