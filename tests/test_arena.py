@@ -12,6 +12,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 from host.arena import ATOM, PAIR, Arena, ArenaError  # noqa: E402
 from host.arena_budget import budget, load_profile  # noqa: E402
+from host.arena_layout import layout  # noqa: E402
 
 
 class Naive:
@@ -118,10 +119,46 @@ def test_budget_from_profile():
     print(f"ok: budget = {b['node_capacity']} nodes from {prof['name']}")
 
 
+def test_layout_arithmetic():
+    lay = layout()
+    assert lay["offsets"] == {"tag": 0, "domain": 4, "left": 8, "right": 12, "value": 16}, lay
+    assert lay["packed_bytes"] == 21, lay
+    assert lay["struct_bytes"] == 24, lay
+    print("ok: layout derived -> packed 21 B, struct 24 B")
+
+
+def test_buffer_roundtrip():
+    a = Arena(64)
+    nil = a.alloc_atom(0, domain=0)
+    root = a.alloc_pair(a.alloc_atom(7, domain=1), nil, domain=2)
+    bufs = a.to_buffers()
+    b = Arena.from_buffers(bufs)
+    assert naive_equal(to_naive(b, root), to_naive(a, root)), "buffer roundtrip lost structure"
+    # SoA buffers are tightly packed: total nbytes == capacity * packed_bytes
+    total = sum(bufs[k].nbytes for k in ("tag", "domain", "left", "right", "value"))
+    assert total == a.capacity * 21, (total, a.capacity * 21)
+    print(f"ok: buffer roundtrip preserved the tree; packed {total} B")
+
+
+def test_soa_packing_is_tighter():
+    prof = load_profile()
+    aos = budget(prof, "aos")
+    soa = budget(prof, "soa")
+    assert aos["node_bytes"] == 24 and soa["node_bytes"] == 21
+    assert soa["node_capacity"] > aos["node_capacity"], (soa, aos)
+    print(
+        f"ok: soa {soa['node_capacity']} nodes > aos {aos['node_capacity']} nodes "
+        f"({soa['node_capacity'] - aos['node_capacity']} more)"
+    )
+
+
 if __name__ == "__main__":
     test_ops_match_naive()
     test_errors_fail_closed()
     test_dispatch_is_table_lookup()
     test_compaction_frees()
     test_budget_from_profile()
+    test_layout_arithmetic()
+    test_buffer_roundtrip()
+    test_soa_packing_is_tighter()
     print("ALL OK")
