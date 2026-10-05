@@ -38,7 +38,7 @@ def read_exact (bytes: []i64) (offset: i64) (width: i64): i64 =
     let byte_index = position / 8i64
     let bit_index = position % 8i64
     let byte_value = bytes[byte_index]
-    let bit = (byte_value >>> (7i64 - bit_index)) & 1i64
+    let bit = (byte_value >> (7i64 - bit_index)) & 1i64
     in (value << 1i64) | bit
 
 def current_request_valid (bytes: []i64) (bit_len: i64) (offset: i64) (width: i64): bool =
