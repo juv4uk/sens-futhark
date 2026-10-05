@@ -1,0 +1,8 @@
+{
+  "schema": "sens-fixture-bundle/1",
+  "source_repository": "juv4uk/sens",
+  "source_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "contract_version": "11.6",
+  "payload": "identity_vectors.csv",
+  "payload_sha256": "2bcae8ccc14bcb4a4cf81c631ec21d425145a311f6b144b493837e916553596f"
+}
