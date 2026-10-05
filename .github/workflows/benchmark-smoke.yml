@@ -1,0 +1,52 @@
+name: benchmark-smoke
+
+on:
+  push:
+    branches:
+      - agent/chatgpt-sol/5-benchmark-harness-v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: [self-hosted, Linux, X64, sens-futhark]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap Futhark
+        run: make bootstrap
+
+      - name: Check benchmark harness
+        run: python3 -m py_compile bench/run.py
+
+      - name: Run calibration benchmark
+        env:
+          FUTHARK: ${{ github.workspace }}/.tools/bin/futhark
+          CUDA_HOME: /usr/local/cuda-12.6
+        run: |
+          python3 bench/run.py \
+            --sizes 256,4096,65536,1048576 \
+            --runs 5 \
+            --cold-runs 3 \
+            --out bench/results/smoke
+
+      - name: Show benchmark evidence
+        if: always()
+        run: |
+          for f in metadata.json c.json cuda.json cuda.profile.log; do
+            if [ -f "bench/results/smoke/$f" ]; then
+              echo "===== $f ====="
+              cat "bench/results/smoke/$f"
+            fi
+          done
+
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sens-futhark-benchmark-${{ github.sha }}
+          path: bench/results/smoke
+          if-no-files-found: error
