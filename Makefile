@@ -7,7 +7,7 @@ PARITY_RUNNER ?= host/parity.py
 BACKEND_WITNESS ?=
 ARGS ?=
 
-.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-cli sens-cli-parity verify-sens-pin
+.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-cli sens-cli-parity verify-sens-pin release-evidence
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -67,3 +67,6 @@ sens-cli:
 
 sens-cli-parity:
 	bash tools/smoke-sens-cli-parity.sh
+
+release-evidence:
+	bash tools/release-evidence.sh
