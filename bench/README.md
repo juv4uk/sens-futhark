@@ -60,3 +60,24 @@ or explicitly selected evidence snapshots may be preserved separately.
 
 The benchmark compares execution substrates.  It must not be used as evidence
 that CUDA, C, Futhark, or any other backend owns SENS semantic authority.
+
+
+## CUDA library phase probe
+
+The manual benchmark workflow also builds the witness with
+`futhark cuda --library` and runs `bench/transfer_probe.py`. The generated C
+API is used to place synchronization barriers around three distinct phases:
+
+```text
+host arrays
+  -> futhark_new_i32_1d + sync     H→D import (+ device allocation)
+  -> validate_samples + sync       kernel
+  -> futhark_values_bool_1d + sync D→H export
+```
+
+The probe writes `transfer_raw.csv` and `transfer_summary.json`. Context
+creation and NVRTC startup are intentionally excluded from these phase numbers;
+cold process startup remains a separate metric in `metadata.json`.
+
+The H→D number is labelled **import cost**, not pure memcpy time, because the
+public Futhark constructor also owns device allocation.
