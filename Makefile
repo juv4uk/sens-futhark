@@ -41,6 +41,9 @@ export-selector-law: sens-fetch
 check-selector-law:
 	$(FUTHARK) check -w futhark/selector_law.fut
 
+check-work-queue:
+	$(FUTHARK) check -w futhark/work_queue.fut
+
 check-packed-domain:
 	$(FUTHARK) check -w futhark/packed_domain.fut
 	python3 tools/validate-packed-domain-vectors.py
