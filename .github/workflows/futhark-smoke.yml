@@ -4,6 +4,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+# One physical GPU runner backs these tests; never create competing CUDA contexts.
+concurrency:
+  group: sens-futhark-gpu
+  cancel-in-progress: false
+
 jobs:
   witness:
     runs-on: [self-hosted, Linux, X64, sens-futhark]
