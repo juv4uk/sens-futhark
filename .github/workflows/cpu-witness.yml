@@ -8,7 +8,7 @@ on:
 jobs:
   cpu-reference:
     name: CPU reference witness
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, X64, sens-futhark]
     steps:
       - uses: actions/checkout@v4
 
