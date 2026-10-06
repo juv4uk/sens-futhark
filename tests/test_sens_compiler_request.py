@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SENS_ROOT = ROOT / "vendor" / "sens"
-FIXTURE = "car-nested-pair"
+FIXTURE = "nucleus-d3-100"
 VALID = ROOT / "tests" / "compiler_backend_v1.json"
 TOOL = ROOT / "host" / "compiler_backend_v1.py"
 EXPECTED_COMMIT = "f2e7797283c8dfc2aa67935a02b3735a8290041f"
