@@ -36,7 +36,7 @@ static void sync_or_die(struct futhark_context *ctx, const char *what) {
   }
 }
 
-static int read_seed(const char *path, int32_t *domains, int32_t *bits, int32_t *roles) {
+static int read_seed(const char *path, int32_t *domains, int32_t *bits) {
   FILE *fp = fopen(path, "r");
   if (fp == NULL) {
     perror(path);
@@ -44,8 +44,8 @@ static int read_seed(const char *path, int32_t *domains, int32_t *bits, int32_t 
   }
 
   char line[4096];
-  int32_t *targets[3] = {domains, bits, roles};
-  for (int row = 0; row < 3; ++row) {
+  int32_t *targets[2] = {domains, bits};
+  for (int row = 0; row < 2; ++row) {
     if (fgets(line, sizeof(line), fp) == NULL) {
       fprintf(stderr, "seed file ended before row %d\n", row + 1);
       fclose(fp);
@@ -76,7 +76,6 @@ static void run_once(
     struct futhark_context *ctx,
     const int32_t *domains,
     const int32_t *bits,
-    const int32_t *roles,
     int64_t batch,
     int repeat,
     int emit) {
@@ -96,7 +95,7 @@ static void run_once(
 
   struct futhark_i64_1d *result_dev = NULL;
   if (futhark_entry_compiler_legality_scan(
-          ctx, &result_dev, domain_dev, bits_dev, roles_dev, batch) != 0) {
+          ctx, &result_dev, domain_dev, bits_dev, batch) != 0) {
     die_ctx(ctx, "compiler_legality_scan entry failed");
   }
   sync_or_die(ctx, "kernel sync failed");
@@ -117,7 +116,7 @@ static void run_once(
 
   if (emit) {
     const uint64_t h2d_bytes =
-        (uint64_t)SEED_ROWS * 3u * sizeof(int32_t);
+        (uint64_t)SEED_ROWS * 2u * sizeof(int32_t);
     const uint64_t d2h_bytes = sizeof(output);
     printf("%lld,%d,%llu,%llu,%llu,%llu,%llu\n",
            (long long)batch,
@@ -132,8 +131,7 @@ static void run_once(
 
   if (futhark_free_i64_1d(ctx, result_dev) != 0 ||
       futhark_free_i32_1d(ctx, domain_dev) != 0 ||
-      futhark_free_i32_1d(ctx, bits_dev) != 0 ||
-      futhark_free_i32_1d(ctx, roles_dev) != 0) {
+      futhark_free_i32_1d(ctx, bits_dev) != 0) {
     die_ctx(ctx, "failed to free compiler-slice buffers");
   }
 }
@@ -153,8 +151,7 @@ int main(int argc, char **argv) {
 
   int32_t domains[SEED_ROWS];
   int32_t bits[SEED_ROWS];
-  int32_t roles[SEED_ROWS];
-  if (!read_seed(argv[1], domains, bits, roles)) {
+  if (!read_seed(argv[1], domains, bits)) {
     return 2;
   }
 
@@ -171,11 +168,11 @@ int main(int argc, char **argv) {
   }
 
   /* Warm the already-created context and kernel path; excluded from evidence. */
-  run_once(ctx, domains, bits, roles, 256, -1, 0);
+  run_once(ctx, domains, bits, 256, -1, 0);
 
   printf("batch,repeat,h2d_import_bytes,d2h_export_bytes,h2d_import_ns,kernel_ns,d2h_export_ns\n");
   for (int repeat = 0; repeat < repeats; ++repeat) {
-    run_once(ctx, domains, bits, roles, batch, repeat, 1);
+    run_once(ctx, domains, bits, batch, repeat, 1);
   }
 
   futhark_context_free(ctx);
