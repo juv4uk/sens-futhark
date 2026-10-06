@@ -12,7 +12,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SENS_ROOT = ROOT / "vendor" / "sens"
 FIXTURE = "nucleus-d3-100"
-EXPECTED_COMMIT = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
+EXPECTED_COMMIT = "1c052b75a63a640ded2283a9bc7a164c3eefb114"
 
 def main() -> int:
     sys.path.insert(0, str(ROOT / "host"))
