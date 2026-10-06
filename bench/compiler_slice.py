@@ -410,8 +410,7 @@ def main() -> int:
     seed_path = out / "producer_seed.txt"
     seed_path.write_text(
         " ".join(map(str, domains)) + "\n"
-        + " ".join(map(str, bits)) + "\n"
-        + " ".join(map(str, roles)) + "\n",
+        + " ".join(map(str, bits)) + "\n",
         encoding="utf-8",
     )
     transfer_probe = build_transfer_probe(fk, out, gpu_env)
