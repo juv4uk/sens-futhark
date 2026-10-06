@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).resolve().parents[1]
 PROGRAM = ROOT / "futhark" / "compiler_legality_scan.fut"
 PARSER = ROOT / "host"
-EXPECTED_SENS = "f2e7797283c8dfc2aa67935a02b3735a8290041f"
+EXPECTED_SENS = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
 DEFAULT_SIZES = [4096, 65536, 1048576, 4194304]
 
 
@@ -87,26 +87,59 @@ def cuda_env(base: dict[str, str]) -> dict[str, str]:
     return env
 
 
-def producer_requests(sens_root: Path) -> list[str]:
+def producer_artifacts(sens_root: Path) -> list[dict[str, str]]:
     result = run(
-        [cargo(), "run", "--quiet", "-p", "xtask", "--", "compiler-export"],
+        [
+            cargo(),
+            "run",
+            "--quiet",
+            "-p",
+            "xtask",
+            "--",
+            "compiler-export",
+            "--artifact",
+        ],
         cwd=sens_root,
         capture=True,
     )
     text = result.stdout.strip()
-    requests = [
+    artifacts = [
         chunk.strip()
         for chunk in text.split("\n\n")
-        if chunk.strip().startswith("(compiler-semantic-request")
+        if chunk.strip().startswith("(compilation-artifact")
     ]
-    if len(requests) != 9:
-        raise SystemExit(f"expected 9 SENS compiler requests, got {len(requests)}")
-    return requests
+    if len(artifacts) != 9:
+        raise SystemExit(f"expected 9 SENS compiler artifacts, got {len(artifacts)}")
+
+    sys.path.insert(0, str(PARSER))
+    from sens_compiler_request import SensRequestError, load_sens_artifact
+
+    with tempfile.TemporaryDirectory() as tmp:
+        parsed: list[dict[str, str]] = []
+        for index, source in enumerate(artifacts):
+            path = Path(tmp) / f"artifact-{index}.lisp"
+            path.write_text(source + "\n", encoding="utf-8")
+            try:
+                artifact = load_sens_artifact(path)
+            except SensRequestError as exc:
+                raise SystemExit(f"producer artifact {index} rejected: {exc}") from exc
+            semantic_request = artifact["semantic_request"]
+            if not isinstance(semantic_request, str):
+                raise SystemExit(f"producer artifact {index} has invalid embedded request")
+            parsed.append(
+                {
+                    "fixture_id": artifact["fixture_id"],
+                    "semantic_request_sha256": artifact["semantic_request_sha256"],
+                    "semantic_request": semantic_request,
+                }
+            )
+    return parsed
 
 
-def parse_requests(requests: list[str]) -> tuple[list[int], list[int], list[int], dict]:
+def parse_requests(artifacts: list[dict[str, str]]) -> tuple[list[int], list[int], list[int], dict]:
     sys.path.insert(0, str(PARSER))
     from sens_compiler_request import (  # type: ignore
+        EXPECTED_SOURCE_COMMIT,
         SENS_ROLE_TO_BACKEND_ROLE,
         SensRequestError,
         load_sens_request,
@@ -121,7 +154,8 @@ def parse_requests(requests: list[str]) -> tuple[list[int], list[int], list[int]
     roles: list[int] = []
     rows = []
     with tempfile.TemporaryDirectory() as tmp:
-        for index, source in enumerate(requests):
+        for index, artifact in enumerate(artifacts):
+            source = artifact["semantic_request"]
             path = Path(tmp) / f"request-{index}.lisp"
             path.write_text(source + "\n", encoding="utf-8")
             try:
@@ -144,6 +178,7 @@ def parse_requests(requests: list[str]) -> tuple[list[int], list[int], list[int]
                     "role_code": role_code,
                     "source_commit": parsed["provenance"]["source_commit"],
                     "authority_sha256": parsed["provenance"]["role_authority_digest"],
+                    "semantic_request_sha256": artifact["semantic_request_sha256"],
                 }
             )
 
@@ -152,9 +187,13 @@ def parse_requests(requests: list[str]) -> tuple[list[int], list[int], list[int]
     authority = {row["authority_sha256"] for row in rows}
     if len(authority) != 1:
         raise SystemExit("producer requests disagree on role-authority digest")
+    digests = {row["semantic_request_sha256"] for row in rows}
+    if len(digests) != len(rows):
+        raise SystemExit("producer artifacts are not byte-distinct by semantic-request-sha256")
     return domains, bits, roles, {
         "source_commit": EXPECTED_SENS,
         "role_authority_digest": next(iter(authority)),
+        "semantic_request_sha256": sorted(digests),
         "rows": rows,
     }
 
@@ -313,8 +352,8 @@ def main() -> int:
     out = (args.out or ROOT / "bench" / "results" / f"compiler-slice-{stamp}").resolve()
     out.mkdir(parents=True, exist_ok=True)
 
-    requests = producer_requests(sens_root)
-    domains, bits, roles, provenance = parse_requests(requests)
+    artifacts = producer_artifacts(sens_root)
+    domains, bits, roles, provenance = parse_requests(artifacts)
 
     spec = out / "compiler-slice.spec"
     seed_domains = ", ".join(map(str, domains))
@@ -392,11 +431,13 @@ def main() -> int:
         "producer": {
             "repository": "juv4uk/sens",
             "commit": provenance["source_commit"],
+            "artifact_schema": "compiler-compilation-artifact/1",
             "role_authority_digest": provenance["role_authority_digest"],
+            "semantic_request_sha256": provenance["semantic_request_sha256"],
             "rows": provenance["rows"],
         },
         "source_request_bytes": sum(
-            len(request.encode("utf-8")) for request in requests
+            len(artifact["semantic_request"].encode("utf-8")) for artifact in artifacts
         ),
         "seed_request_bytes": len(domains) * 3 * 4,
         "entry": "compiler_legality_scan",
