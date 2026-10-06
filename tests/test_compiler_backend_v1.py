@@ -29,7 +29,7 @@ def main() -> int:
         print(good.stdout + good.stderr)
         return 1
     lowered = json.loads(good.stdout)
-    assert lowered["entry"] == "lower_pair_construct"
+    assert lowered["entry"] == "lower_selector_head"
     assert lowered["target"] == "futhark"
 
     source = json.loads(VALID.read_text(encoding="utf-8"))

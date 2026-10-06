@@ -1,10 +1,10 @@
 # Canonical SENS language source pin for sens-futhark release packaging.
 # Semantic authority remains juv4uk/sens. This repo must not reimplement the language.
 SENS_REPOSITORY=https://github.com/juv4uk/sens.git
-SENS_COMMIT=08db33ced8643aedaa7de35cb61407900c0b0c05
+SENS_COMMIT=f2e7797283c8dfc2aa67935a02b3735a8290041f
 SENS_CONTRACT=11.6
 # Expected local checkout path for release entrypoint (#39)
 SENS_CHECKOUT_PATH=vendor/sens
 # Update procedure: bump SENS_COMMIT only after upstream release decision; never silent float.
-# Updated after sens#3826: current stable compiler-inclusive main point.
+# Updated after sens#3834: producer-owned compiler-semantic-input API and full D3+D4 export.
 # Contract remains 11.6; semantic authority remains the upstream language contract.

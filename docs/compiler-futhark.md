@@ -10,8 +10,14 @@ The canonical SENS compiler owns semantic derivation:
 juv4uk/sens
   exact-domain source
   → SENS-owned compiler lowering role
-  → canonical backend-neutral request
+  → compiler-semantic-input/1 request
 ```
+
+`host/sens_compiler_request.py` consumes that SENS-owned request directly. It
+validates the version, exact identity, current-law status, role, source SHA,
+Contract 11.6, and role-authority digest. It does not reconstruct the role from
+the identity bits. `host/compiler_backend_v1.py` then adds only the local
+Futhark target mechanism and chooses a target entrypoint.
 
 This repository owns only target lowering:
 
@@ -55,8 +61,13 @@ The backend is fail-closed when:
 - contract/version is unknown;
 - source commit does not match the pinned authority;
 - role-authority digest is stale;
+- the request is from D8 or another non-admitted domain;
 - an operation is not admitted by the backend capability set;
 - required target support is missing.
+
+The checked-in JSON request under `tests/compiler_backend_v1.json` is now only
+a parity fixture for the canonical SENS request. The semantic request consumer
+is exercised by `tests/test_sens_compiler_request.py`.
 
 ## Compilation path
 
@@ -65,7 +76,7 @@ The first vertical slice is deliberately narrow:
 ```text
 SENS source
   ↓
-SENS-owned role derivation (#3824)
+SENS-owned role derivation (#3834 / compiler_lowering_role_from_sens)
   ↓
 compiler-backend/v1 request
   ↓
@@ -92,10 +103,12 @@ The compiler backend should feed these existing execution pieces instead of repl
 
 Dependencies:
 
-- `juv4uk/sens#3824`: final SENS-owned nine-role compiler closure;
+- `juv4uk/sens#3834`: producer-owned `CompilerSemanticInput` library API;
+- `juv4uk/sens#3832`: full D3+D4 nine-role `compiler-semantic-input/1` export;
 - `juv4uk/sens#3801`: GPU admission;
 - `juv4uk/sens#3802`: compact binary execution packet;
 - `juv4uk/sens#3760`: fixed-point C0→C1→C2 evidence;
+- `juv4uk/cml#622`: independent consumer of the same producer-owned export;
 - `juv4uk/cml#606`: separate native CML IR admission path.
 
 The backend must remain independent of CML-specific mechanism names.

@@ -12,13 +12,15 @@ import hashlib
 import json
 from pathlib import Path
 
+from sens_compiler_request import load_sens_request
+
 ROOT = Path(__file__).resolve().parents[1]
 PROGRAM = ROOT / "futhark" / "compiler_structural.fut"
 
 # These are provenance facts, not semantic meaning. They change only when the
 # upstream compiler-authority bundle changes.
-EXPECTED_SOURCE_COMMIT = "08db33ced8643aedaa7de35cb61407900c0b0c05"
-EXPECTED_ROLE_AUTHORITY_DIGEST = "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9"
+EXPECTED_SOURCE_COMMIT = "f2e7797283c8dfc2aa67935a02b3735a8290041f"
+EXPECTED_ROLE_AUTHORITY_DIGEST = "9768f683e90cfb56ca95675d1f6ac0e6ede91e21cebe97e20b455cf1b3094791"
 
 ROLE_TO_ENTRY = {
     "PairConstruct": "lower_pair_construct",
@@ -108,19 +110,63 @@ def lower(request: dict) -> dict:
     }
 
 
+def lower_sens_request(request: dict, mechanism: str) -> dict:
+    if not mechanism:
+        raise ContractError("missing admitted target mechanism")
+    entry = ROLE_TO_ENTRY.get(request["role"])
+    if entry is None:
+        raise ContractError(
+            f"BLOCKED-MECHANISM: no Futhark lowering for {request['role']}"
+        )
+    return {
+        "schema": "sens-futhark/compiler-backend/v1",
+        "target": "futhark",
+        "program": str(PROGRAM.relative_to(ROOT)),
+        "entry": entry,
+        "source_commit": request["provenance"]["source_commit"],
+        "role": request["role"],
+        "mechanism": mechanism,
+        "role_authority_digest": request["provenance"]["role_authority_digest"],
+        "fixture_id": request["fixture_id"],
+        "identity": request["identity"],
+        "request_digest": digest_json(request),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("request", type=Path)
+    parser.add_argument("request", type=Path, nargs="?")
+    parser.add_argument("--sens-request", type=Path)
+    parser.add_argument("--gpu-mechanism", default="")
     parser.add_argument("--lower", action="store_true")
     args = parser.parse_args()
 
     try:
-        request = load_request(args.request)
-        result = lower(request) if args.lower else {
-            "valid": True,
-            "request_digest": digest_json(request),
-        }
-    except ContractError as exc:
+        if args.sens_request is not None:
+            if args.request is not None:
+                raise ContractError(
+                    "choose one request source: positional JSON or --sens-request"
+                )
+            request = load_sens_request(args.sens_request)
+            result = (
+                lower_sens_request(request, args.gpu_mechanism)
+                if args.lower
+                else {
+                    "valid": True,
+                    "request_digest": digest_json(request),
+                    "fixture_id": request["fixture_id"],
+                    "role": request["role"],
+                }
+            )
+        else:
+            if args.request is None:
+                raise ContractError("a request path or --sens-request is required")
+            request = load_request(args.request)
+            result = lower(request) if args.lower else {
+                "valid": True,
+                "request_digest": digest_json(request),
+            }
+    except (ContractError, ValueError, OSError) as exc:
         print(f"FAIL-CLOSED: {exc}")
         return 2
 
