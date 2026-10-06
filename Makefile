@@ -10,7 +10,7 @@ ARGS ?=
 # GPU-only policy (#79): automatic CI runs only the CUDA targets below.
 # Targets marked 'reference-only' execute the C backend on the host; they are an
 # internal semantic reference and must never be treated as a release/CI path.
-.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain test-packed-domain-cuda check-compiler-backend test-compiler-backend-cuda smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-fetch sens-cli sens-cli-parity verify-sens-pin release-evidence
+.PHONY: bootstrap probe probe-cuda-json check check-identity test-identity-cpu test-identity-cuda check-packed-domain test-packed-domain test-packed-domain-cuda check-compiler-backend test-compiler-backend-cuda benchmark-compiler-slice smoke-opencl smoke-cuda import-fixture witness-cpu witness-parity sens-fetch sens-cli sens-cli-parity verify-sens-pin release-evidence
 
 bootstrap:
 	bash tools/install-futhark.sh
@@ -67,6 +67,11 @@ test-compiler-backend-cuda: sens-fetch
 	python3 tests/test_compiler_backend_v1.py
 	python3 tests/test_sens_compiler_request.py
 	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/compiler_structural.fut
+
+# Manual research lane for #113: real SENS producer -> compiler legality scan -> CPU/CUDA evidence.
+# This is intentionally separate from the fast compiler CI gate.
+benchmark-compiler-slice: sens-fetch
+	bash "$(CUDA_ENV)" run python3 bench/compiler_slice.py --futhark "$(FUTHARK)"
 
 smoke-opencl:
 	FUTHARK=$(FUTHARK) bash tools/smoke-opencl.sh
