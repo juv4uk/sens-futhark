@@ -126,7 +126,7 @@ def main() -> int:
         assert "stale SENS source revision" in result.stdout
 
         stale_authority = generated.replace(
-            "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9",
+            "9768f683e90cfb56ca95675d1f6ac0e6ede91e21cebe97e20b455cf1b3094791",
             "0" * 64,
         )
         path.write_text(stale_authority + "\n", encoding="utf-8")
