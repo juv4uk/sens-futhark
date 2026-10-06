@@ -12,5 +12,4 @@
                           (revision . "08db33ced8643aedaa7de35cb61407900c0b0c05")
                           (authority-path . "knowledge/bija3-l1-l5-structure-projection.json")
                           (authority-sha256 . "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9")
-                          (compiler-nucleus-sha256 . "0000000000000000000000000000000000000000000000000000000000000000")
                           (contract . 11.6))))
