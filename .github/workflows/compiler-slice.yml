@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: sens-futhark-compiler-slice
+  group: sens-futhark-compiler-slice-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
