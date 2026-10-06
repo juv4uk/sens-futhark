@@ -19,7 +19,7 @@ PROGRAM = ROOT / "futhark" / "compiler_structural.fut"
 
 # These are provenance facts, not semantic meaning. They change only when the
 # upstream compiler-authority bundle changes.
-EXPECTED_SOURCE_COMMIT = "c3878ef2be03894a46bde8263f75138adf276798"
+EXPECTED_SOURCE_COMMIT = "f2e7797283c8dfc2aa67935a02b3735a8290041f"
 EXPECTED_ROLE_AUTHORITY_DIGEST = "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9"
 
 ROLE_TO_ENTRY = {
