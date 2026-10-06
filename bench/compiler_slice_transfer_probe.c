@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 
 #include "compiler_legality_scan_cuda.h"
@@ -85,9 +84,7 @@ static void run_once(
       futhark_new_i32_1d(ctx, domains, SEED_ROWS);
   struct futhark_i32_1d *bits_dev =
       futhark_new_i32_1d(ctx, bits, SEED_ROWS);
-  struct futhark_i32_1d *roles_dev =
-      futhark_new_i32_1d(ctx, roles, SEED_ROWS);
-  if (domain_dev == NULL || bits_dev == NULL || roles_dev == NULL) {
+  if (domain_dev == NULL || bits_dev == NULL) {
     die_ctx(ctx, "failed to import compiler request seed");
   }
   sync_or_die(ctx, "H2D/import sync failed");
