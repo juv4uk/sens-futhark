@@ -45,7 +45,7 @@ def main() -> int:
     assert lowered["entry"] == "lower_selector_head"
     assert lowered["target"] == "futhark"
     assert lowered["role"] == "SelectorHead"
-    assert lowered["source_commit"] == "08db33ced8643aedaa7de35cb61407900c0b0c05"
+    assert lowered["source_commit"] == "c3878ef2be03894a46bde8263f75138adf276798"
     assert lowered["fixture_id"] == "car-nested-pair"
 
     manual = json.loads(VALID.read_text(encoding="utf-8"))
@@ -57,7 +57,7 @@ def main() -> int:
         path = Path(tmp) / "bad.lisp"
 
         stale = REQUEST.read_text(encoding="utf-8").replace(
-            "08db33ced8643aedaa7de35cb61407900c0b0c05", "0" * 40
+            "c3878ef2be03894a46bde8263f75138adf276798", "0" * 40
         )
         path.write_text(stale, encoding="utf-8")
         result = run_sens(path)
