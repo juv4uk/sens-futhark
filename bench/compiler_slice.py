@@ -131,6 +131,7 @@ def producer_artifacts(sens_root: Path) -> list[dict[str, str]]:
                     "fixture_id": artifact["fixture_id"],
                     "semantic_request_sha256": artifact["semantic_request_sha256"],
                     "semantic_request": semantic_request,
+                    "artifact_source": source,
                 }
             )
     return parsed
@@ -354,6 +355,12 @@ def main() -> int:
 
     artifacts = producer_artifacts(sens_root)
     domains, bits, roles, provenance = parse_requests(artifacts)
+
+    (out / "producer_artifacts.lisp").write_text(
+        "\n\n".join(artifact["artifact_source"] for artifact in artifacts) + "\n",
+        encoding="utf-8",
+    )
+
 
     spec = out / "compiler-slice.spec"
     seed_domains = ", ".join(map(str, domains))
