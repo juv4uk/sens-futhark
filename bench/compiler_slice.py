@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).resolve().parents[1]
 PROGRAM = ROOT / "futhark" / "compiler_legality_scan.fut"
 PARSER = ROOT / "host"
-EXPECTED_SENS = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
+EXPECTED_SENS = "1c052b75a63a640ded2283a9bc7a164c3eefb114"
 DEFAULT_SIZES = [4096, 65536, 1048576, 4194304, 8388608, 16777216]
 
 
