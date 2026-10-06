@@ -2,7 +2,7 @@
   "schema": "sens-futhark/compiler-backend/v1",
   "provenance": {
     "source_repository": "juv4uk/sens",
-    "source_commit": "f2e7797283c8dfc2aa67935a02b3735a8290041f",
+    "source_commit": "1869fd5e51f38565ca968abceaa4bc933ae7a114",
     "contract": "11.6",
     "role_authority_digest": "9768f683e90cfb56ca95675d1f6ac0e6ede91e21cebe97e20b455cf1b3094791"
   },
