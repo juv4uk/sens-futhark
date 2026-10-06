@@ -128,9 +128,15 @@ def load_sens_request(path: Path) -> dict:
         raise SensRequestError("invalid SENS authority digest")
     if authority_sha256 != EXPECTED_ROLE_AUTHORITY_DIGEST:
         raise SensRequestError("stale SENS role authority digest")
-    nucleus_sha256 = _quoted_pair(source, "compiler-nucleus-sha256")
-    if not re.fullmatch(r"[0-9a-f]{64}", nucleus_sha256):
-        raise SensRequestError("invalid compiler nucleus digest")
+    nucleus_sha256 = None
+    try:
+        candidate = _quoted_pair(source, "compiler-nucleus-sha256")
+    except SensRequestError:
+        candidate = None
+    if candidate is not None:
+        if not re.fullmatch(r"[0-9a-f]{64}", candidate):
+            raise SensRequestError("invalid compiler nucleus digest")
+        nucleus_sha256 = candidate
     contract = _atom_pair(source, "contract")
     if contract != EXPECTED_CONTRACT:
         raise SensRequestError(f"unsupported SENS contract: {contract}")
