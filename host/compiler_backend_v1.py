@@ -108,19 +108,65 @@ def lower(request: dict) -> dict:
     }
 
 
+def lower_sens_request(request: dict, mechanism: str) -> dict:
+    if not mechanism:
+        raise ContractError("missing admitted target mechanism")
+    entry = ROLE_TO_ENTRY.get(request["role"])
+    if entry is None:
+        raise ContractError(
+            f"BLOCKED-MECHANISM: no Futhark lowering for {request['role']}"
+        )
+    return {
+        "schema": "sens-futhark/compiler-backend/v1",
+        "target": "futhark",
+        "program": str(PROGRAM.relative_to(ROOT)),
+        "entry": entry,
+        "source_commit": request["provenance"]["source_commit"],
+        "role": request["role"],
+        "mechanism": mechanism,
+        "role_authority_digest": request["provenance"]["role_authority_digest"],
+        "fixture_id": request["fixture_id"],
+        "identity": request["identity"],
+        "request_digest": digest_json(request),
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("request", type=Path)
+    parser.add_argument("request", type=Path, nargs="?")
+    parser.add_argument("--sens-request", type=Path)
+    parser.add_argument("--gpu-mechanism", default="")
     parser.add_argument("--lower", action="store_true")
     args = parser.parse_args()
 
     try:
-        request = load_request(args.request)
-        result = lower(request) if args.lower else {
-            "valid": True,
-            "request_digest": digest_json(request),
-        }
-    except ContractError as exc:
+        if args.sens_request is not None:
+            if args.request is not None:
+                raise ContractError(
+                    "choose one request source: positional JSON or --sens-request"
+                )
+            from sens_compiler_request import load_sens_request
+
+            request = load_sens_request(args.sens_request)
+            result = (
+                lower_sens_request(request, args.gpu_mechanism)
+                if args.lower
+                else {
+                    "valid": True,
+                    "request_digest": digest_json(request),
+                    "fixture_id": request["fixture_id"],
+                    "role": request["role"],
+                }
+            )
+        else:
+            if args.request is None:
+                raise ContractError("a request path or --sens-request is required")
+            request = load_request(args.request)
+            result = lower(request) if args.lower else {
+                "valid": True,
+                "request_digest": digest_json(request),
+            }
+    except (ContractError, OSError) as exc:
         print(f"FAIL-CLOSED: {exc}")
         return 2
 
