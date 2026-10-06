@@ -369,18 +369,13 @@ def main() -> int:
     seed_domains = ", ".join(map(str, domains))
     seed_bits = ", ".join(map(str, bits))
     seed_roles = ", ".join(map(str, roles))
-    lines: list[str] = []
+    lines: list[str] = ["==", "entry: compiler_legality_scan"]
     for size in sizes:
-        lines.extend(
-            [
-                "==",
-                "entry: compiler_legality_scan",
-                f'"compiler-slice-{size}" input {{ [{seed_domains}] [{seed_bits}] {size}i64 }}',
-                f"output {{ [{size}i64] }}",
-                "",
-            ]
+        lines.append(
+            f'"compiler-slice-{size}" input {{ [{seed_domains}] [{seed_bits}] {size}i64 }}'
         )
-    spec.write_text("\n".join(lines), encoding="utf-8")
+        lines.append(f"output {{ [{size}i64] }}")
+    spec.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     base_env = dict(os.environ)
     gpu_env = cuda_env(base_env)
