@@ -80,6 +80,16 @@ jobs:
             make test-compiler-backend-cuda
           '
 
+      # Після кроку з flock (замок уже відпущено): воркер бере той самий замок
+      # допуску сам, тому викликати його всередині flock = самоблокування.
+      - name: Shared CUDA worker parity (CPU reference vs worker)
+        shell: bash
+        env:
+          CML_GPU_WORKER_SOCKET: /run/cml-gpu-worker/worker.sock
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/gpu-worker-parity.py --evidence evidence/futhark/gpu-worker-parity.json
+
       - name: Publish CUDA evidence metadata
         shell: bash
         run: |
@@ -102,3 +112,4 @@ jobs:
             evidence/futhark/cuda.env
             evidence/futhark/cuda-capability.json
             evidence/futhark/admission.env
+            evidence/futhark/gpu-worker-parity.json
