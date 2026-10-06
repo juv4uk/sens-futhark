@@ -7,6 +7,7 @@ test never treats a hand-written semantic request as canonical evidence.
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,6 +21,19 @@ TOOL = ROOT / "host" / "compiler_backend_v1.py"
 EXPECTED_COMMIT = "f2e7797283c8dfc2aa67935a02b3735a8290041f"
 
 
+def cargo_command() -> str:
+    resolved = shutil.which("cargo")
+    if resolved is not None:
+        return resolved
+    fallback = Path.home() / ".cargo" / "bin" / "cargo"
+    if fallback.is_file():
+        return str(fallback)
+    raise AssertionError(
+        "cargo is required for the pinned SENS producer but is not available "
+        "on PATH or at ~/.cargo/bin/cargo"
+    )
+
+
 def produce_sens_request() -> str:
     cargo_toml = SENS_ROOT / "Cargo.toml"
     if not cargo_toml.is_file():
@@ -28,7 +42,7 @@ def produce_sens_request() -> str:
         )
     result = subprocess.run(
         [
-            "cargo",
+            cargo_command(),
             "run",
             "--quiet",
             "-p",
