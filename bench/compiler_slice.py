@@ -21,7 +21,7 @@ from datetime import datetime, timezone
 ROOT = Path(__file__).resolve().parents[1]
 PROGRAM = ROOT / "futhark" / "compiler_legality_scan.fut"
 PARSER = ROOT / "host"
-EXPECTED_SENS = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
+EXPECTED_SENS = "5964c4dd2378364a5307b143a65438f8609fecd6"
 DEFAULT_SIZES = [4096, 65536, 1048576, 4194304, 8388608, 16777216]
 
 
@@ -339,6 +339,11 @@ def main() -> int:
     ap.add_argument("--out", type=Path)
     ap.add_argument("--sizes", default=",".join(map(str, DEFAULT_SIZES)))
     ap.add_argument("--runs", type=int, default=5)
+    ap.add_argument(
+        "--cuda-only",
+        action="store_true",
+        help="skip the CPU reference benchmark; keep only producer bootstrap and CUDA execution",
+    )
     args = ap.parse_args()
 
     sizes = [int(x) for x in args.sizes.split(",") if x]
@@ -381,31 +386,34 @@ def main() -> int:
     gpu_env = cuda_env(base_env)
     c_json = out / "c.json"
     cuda_json = out / "cuda.json"
-    bench(fk, "c", spec, c_json, base_env, args.runs)
+    if not args.cuda_only:
+        bench(fk, "c", spec, c_json, base_env, args.runs)
     bench(fk, "cuda", spec, cuda_json, gpu_env, args.runs, profile=True)
 
-    c_data = json.loads(c_json.read_text(encoding="utf-8"))
+    csets = None
+    if not args.cuda_only:
+        c_data = json.loads(c_json.read_text(encoding="utf-8"))
+        csets = next(iter(c_data.values()))["datasets"]
     g_data = json.loads(cuda_json.read_text(encoding="utf-8"))
-    csets = next(iter(c_data.values()))["datasets"]
     gsets = next(iter(g_data.values()))["datasets"]
     summary = []
     for size in sizes:
         key = f"compiler-slice-{size}"
-        if key not in csets or key not in gsets:
+        if key not in gsets or (csets is not None and key not in csets):
             raise SystemExit(f"missing benchmark dataset for {size}")
-        cmed = statistics.median(csets[key]["runtimes"])
+        cmed = None if csets is None else statistics.median(csets[key]["runtimes"])
         gmed = statistics.median(gsets[key]["runtimes"])
         events = gsets[key].get("profiling", {}).get("events", [])
         kernel_us = events[0].get("duration") if events else None
-        summary.append(
-            {
-                "elements": size,
-                "c_median_us": cmed,
-                "cuda_median_us": gmed,
-                "cuda_over_c_speedup": cmed / gmed,
-                "cuda_kernel_us": kernel_us,
-            }
-        )
+        row = {
+            "elements": size,
+            "cuda_median_us": gmed,
+            "cuda_kernel_us": kernel_us,
+        }
+        if cmed is not None:
+            row["c_median_us"] = cmed
+            row["cuda_over_c_speedup"] = cmed / gmed
+        summary.append(row)
 
     seed_path = out / "producer_seed.txt"
     seed_path.write_text(
@@ -471,7 +479,8 @@ def main() -> int:
         "seed_request_bytes": len(domains) * 3 * 4,
         "resident_payload_bytes": len(domains) * 2 * 4 + 8,
         "entry": "compiler_legality_scan",
-        "raw": {"c": "c.json", "cuda": "cuda.json", "transfer": "transfer_raw.csv"},
+        "mode": "cuda-only" if args.cuda_only else "cpu-cuda-reference",
+        "raw": {"c": None if args.cuda_only else "c.json", "cuda": "cuda.json", "transfer": "transfer_raw.csv"},
         "summary": summary,
         "transfer_summary": transfer_summary,
         "note": (

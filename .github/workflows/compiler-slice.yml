@@ -3,13 +3,13 @@ name: Compiler-on-GPU research slice
 on:
   workflow_dispatch:
   pull_request:
-    types: [ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions:
   contents: read
 
 concurrency:
-  group: sens-futhark-compiler-slice
+  group: sens-futhark-compiler-slice-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,6 +17,10 @@ jobs:
     name: Compiler GPU slice
     runs-on: [self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]
     timeout-minutes: 30
+    env:
+      # The producer is control-plane only. Cap Rust bootstrap parallelism so
+      # the local host stays responsive while CUDA owns the large batches.
+      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -68,7 +72,7 @@ jobs:
               echo "admission_wait_ns=$wait_ns"
             } > evidence/compiler-slice/admission.env
 
-            make benchmark-compiler-slice
+            make benchmark-compiler-slice-cuda
           '
 
       - name: Publish compiler slice evidence

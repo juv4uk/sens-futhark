@@ -11,7 +11,7 @@ permissions:
 
 # Only the newest GPU request for a ref may occupy the single physical card.
 concurrency:
-  group: sens-futhark-gpu-only
+  group: sens-futhark-gpu-only-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,6 +20,9 @@ jobs:
     # Fail closed onto the GPU-capable runner. Never fall back to an ordinary CPU runner.
     runs-on: [self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]
     timeout-minutes: 15
+    env:
+      # Cargo is bootstrap/control-plane only; do not let it saturate the host CPU.
+      CARGO_BUILD_JOBS: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
