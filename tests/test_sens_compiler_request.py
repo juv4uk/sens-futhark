@@ -97,16 +97,16 @@ def main() -> int:
             path,
             "--lower",
             "--gpu-mechanism",
-            "futhark.structural.selector-head-v1",
+            "futhark.structural.pair-v1",
         )
         if good.returncode != 0:
             print(good.stdout + good.stderr)
             return 1
 
         lowered = json.loads(good.stdout)
-        assert lowered["entry"] == "lower_selector_head"
+        assert lowered["entry"] == "lower_pair_construct"
         assert lowered["target"] == "futhark"
-        assert lowered["role"] == "SelectorHead"
+        assert lowered["role"] == "PairConstruct"
         assert lowered["source_commit"] == EXPECTED_COMMIT
         assert lowered["fixture_id"] == FIXTURE
 
@@ -135,7 +135,7 @@ def main() -> int:
         assert "stale SENS role authority digest" in result.stdout
 
         d8 = generated.replace(
-            "(domain . D3) (bits . 100)", "(domain . D8) (bits . 00000000)"
+            "(domain . D3) (bits . 111)", "(domain . D8) (bits . 00000000)"
         )
         path.write_text(d8 + "\n", encoding="utf-8")
         result = run_sens(path)
