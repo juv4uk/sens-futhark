@@ -175,6 +175,113 @@ def bench(fk: Path, backend: str, spec: Path, out_json: Path, env: dict[str, str
     )
 
 
+def build_transfer_probe(fk: Path, out: Path, env: dict[str, str]) -> Path:
+    libbase = out / "compiler_legality_scan_cuda"
+    run(
+        [fk, "cuda", "--library", PROGRAM, "-o", libbase],
+        env=env,
+    )
+    root = Path(env.get("CUDA_HOME") or env.get("CUDA_PATH") or "/usr/local/cuda-12.6")
+    target = root / "targets" / "x86_64-linux"
+    driver = Path("/usr/lib/wsl/lib")
+    binary = out / "compiler_slice_transfer_probe"
+    run(
+        [
+            "cc",
+            "-O2",
+            "-std=c99",
+            "-Wall",
+            "-Wextra",
+            "-I",
+            out,
+            "-I",
+            target / "include",
+            ROOT / "bench" / "compiler_slice_transfer_probe.c",
+            Path(str(libbase) + ".c"),
+            "-o",
+            binary,
+            "-L",
+            driver,
+            "-L",
+            target / "lib",
+            "-lcuda",
+            "-lcudart",
+            "-lnvrtc",
+            "-lm",
+            "-pthread",
+            "-ldl",
+        ],
+        env=env,
+    )
+    return binary
+
+
+def run_transfer_probe(
+    binary: Path,
+    seed_path: Path,
+    sizes: list[int],
+    repeats: int,
+    env: dict[str, str],
+    out: Path,
+) -> list[dict]:
+    rows: list[dict] = []
+    raw_path = out / "transfer_raw.csv"
+    with raw_path.open("w", encoding="utf-8") as raw:
+        for size in sizes:
+            result = run(
+                [binary, seed_path, size, repeats],
+                env=env,
+                capture=True,
+            )
+            raw.write(result.stdout)
+            records = [
+                line for line in result.stdout.splitlines()
+                if line and not line.startswith("batch,")
+            ]
+            for line in records:
+                fields = line.split(",")
+                if len(fields) != 7:
+                    raise SystemExit(f"invalid transfer probe row: {line}")
+                rows.append(
+                    {
+                        "batch": int(fields[0]),
+                        "repeat": int(fields[1]),
+                        "h2d_import_bytes": int(fields[2]),
+                        "d2h_export_bytes": int(fields[3]),
+                        "h2d_import_ns": int(fields[4]),
+                        "kernel_ns": int(fields[5]),
+                        "d2h_export_ns": int(fields[6]),
+                    }
+                )
+
+    summaries = []
+    for size in sizes:
+        subset = [row for row in rows if row["batch"] == size]
+        if len(subset) != repeats:
+            raise SystemExit(
+                f"expected {repeats} transfer rows for {size}, got {len(subset)}"
+            )
+        h2d = statistics.median([row["h2d_import_ns"] for row in subset])
+        kernel = statistics.median([row["kernel_ns"] for row in subset])
+        d2h = statistics.median([row["d2h_export_ns"] for row in subset])
+        summaries.append(
+            {
+                "elements": size,
+                "h2d_import_bytes": subset[0]["h2d_import_bytes"],
+                "d2h_export_bytes": subset[0]["d2h_export_bytes"],
+                "h2d_import_median_us": h2d / 1000.0,
+                "kernel_median_us": kernel / 1000.0,
+                "d2h_export_median_us": d2h / 1000.0,
+                "phase_sum_median_us": (h2d + kernel + d2h) / 1000.0,
+            }
+        )
+    (out / "transfer_summary.json").write_text(
+        json.dumps({"schema": 1, "rows": summaries}, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return summaries
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--futhark")
@@ -248,6 +355,23 @@ def main() -> int:
             }
         )
 
+    seed_path = out / "producer_seed.txt"
+    seed_path.write_text(
+        " ".join(map(str, domains)) + "\n"
+        + " ".join(map(str, bits)) + "\n"
+        + " ".join(map(str, roles)) + "\n",
+        encoding="utf-8",
+    )
+    transfer_probe = build_transfer_probe(fk, out, gpu_env)
+    transfer_summary = run_transfer_probe(
+        transfer_probe,
+        seed_path,
+        sizes,
+        args.runs,
+        gpu_env,
+        out,
+    )
+
     metadata = {
         "schema": 1,
         "timestamp_utc": stamp,
@@ -265,8 +389,9 @@ def main() -> int:
         },
         "seed_request_bytes": len(domains) * 3 * 4,
         "entry": "compiler_legality_scan",
-        "raw": {"c": "c.json", "cuda": "cuda.json"},
+        "raw": {"c": "c.json", "cuda": "cuda.json", "transfer": "transfer_raw.csv"},
         "summary": summary,
+        "transfer_summary": transfer_summary,
         "note": (
             "Batch items are deterministic repetitions of nine distinct "
             "producer-derived compiler-semantic requests; this is a mechanical "
