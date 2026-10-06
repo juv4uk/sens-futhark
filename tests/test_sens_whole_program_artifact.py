@@ -93,6 +93,14 @@ def main() -> int:
             "stale SENS whole-program revision",
         )
         expect_failure(
+            artifact_text().replace(
+                FIXTURE_NUCLEUS_SHA256,
+                "0" * 64,
+                1,
+            ),
+            "stale compiler-nucleus source digest",
+        )
+        expect_failure(
             artifact_text().replace("(required-capabilities . ())", "(required-capabilities . (gpu))"),
             "capabilities must be empty",
         )
