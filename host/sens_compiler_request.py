@@ -44,7 +44,7 @@ def _quoted_pair(source: str, key: str) -> str:
     if match is None:
         raise SensRequestError(f"missing quoted compiler request field: {key}")
     try:
-        return json.loads(match.group(2))
+        return json.loads(match.group(1))
     except json.JSONDecodeError as exc:
         raise SensRequestError(f"invalid quoted compiler request field: {key}") from exc
 
