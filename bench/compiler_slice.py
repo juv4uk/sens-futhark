@@ -463,7 +463,7 @@ def main() -> int:
             len(artifact["semantic_request"].encode("utf-8")) for artifact in artifacts
         ),
         "seed_request_bytes": len(domains) * 3 * 4,
-        "resident_payload_bytes": len(domains) * 3 * 4 + 8,
+        "resident_payload_bytes": len(domains) * 2 * 4 + 8,
         "entry": "compiler_legality_scan",
         "raw": {"c": "c.json", "cuda": "cuda.json", "transfer": "transfer_raw.csv"},
         "summary": summary,
