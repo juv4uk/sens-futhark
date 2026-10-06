@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROGRAM = ROOT / "futhark" / "compiler_legality_scan.fut"
 PARSER = ROOT / "host"
 EXPECTED_SENS = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
-DEFAULT_SIZES = [4096, 65536, 1048576, 4194304]
+DEFAULT_SIZES = [4096, 65536, 1048576, 4194304, 8388608, 16777216]
 
 
 def run(cmd, *, cwd=None, env=None, capture=False, check=True):
