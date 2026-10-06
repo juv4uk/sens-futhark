@@ -202,21 +202,21 @@ def main() -> int:
     domains, bits, roles, provenance = parse_requests(requests)
 
     spec = out / "compiler-slice.spec"
-    generated = PROGRAM.read_text(encoding="utf-8")
     seed_domains = ", ".join(map(str, domains))
     seed_bits = ", ".join(map(str, bits))
     seed_roles = ", ".join(map(str, roles))
-    lines = [generated.rstrip(), ""]
-    for index, size in enumerate(sizes):
-        if index:
-            lines.extend(["", "-- ==", "-- entry: compiler_legality_scan"])
-        else:
-            lines.extend(["-- ==", "-- entry: compiler_legality_scan"])
-        lines.append(
-            f"-- input {{ [{seed_domains}] [{seed_bits}] [{seed_roles}] {size}i64 }}"
+    lines: list[str] = []
+    for size in sizes:
+        lines.extend(
+            [
+                "==",
+                "entry: compiler_legality_scan",
+                f"input {{ [{seed_domains}] [{seed_bits}] [{seed_roles}] {size}i64 }}",
+                f"output {{ [{size}i64] }}",
+                "",
+            ]
         )
-        lines.append(f"-- output {{ [{size}i64] }}")
-    spec.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    spec.write_text("\n".join(lines), encoding="utf-8")
 
     base_env = dict(os.environ)
     gpu_env = cuda_env(base_env)
@@ -263,14 +263,16 @@ def main() -> int:
             "role_authority_digest": provenance["role_authority_digest"],
             "rows": provenance["rows"],
         },
-        "seed_request_bytes_estimate": len(domains) * 3 * 4,
+        "seed_request_bytes": len(domains) * 3 * 4,
         "entry": "compiler_legality_scan",
         "raw": {"c": "c.json", "cuda": "cuda.json"},
         "summary": summary,
         "note": (
             "Batch items are deterministic repetitions of nine distinct "
             "producer-derived compiler-semantic requests; this is a mechanical "
-            "throughput experiment, not semantic expansion by Futhark."
+            "throughput experiment, not semantic expansion by Futhark. "
+            "The seed request bytes are imported once; batch expansion and "
+            "legality scanning happen on-device."
         ),
     }
     (out / "metadata.json").write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
