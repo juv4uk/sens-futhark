@@ -52,8 +52,23 @@ def main() -> int:
         assert request["provenance"]["source_commit"] == EXPECTED_COMMIT
         assert request["fixture_id"] == FIXTURE
 
-        tampered = artifact_text.replace(artifact["semantic_request_sha256"], "0" * 64, 1)
-        path.write_text(tampered + "\n", encoding="utf-8")
+        byte_tampered = artifact_text.replace(
+            "(bits . 100)",
+            "(bits . 101)",
+            1,
+        )
+        path.write_text(byte_tampered + "\n", encoding="utf-8")
+        try:
+            load_sens_artifact(path)
+        except SensRequestError as exc:
+            assert "digest mismatch" in str(exc)
+        else:
+            raise AssertionError("byte-tampered semantic request was accepted")
+
+        digest_tampered = artifact_text.replace(
+            artifact["semantic_request_sha256"], "0" * 64, 1
+        )
+        path.write_text(digest_tampered + "\n", encoding="utf-8")
         try:
             load_sens_artifact(path)
         except SensRequestError as exc:
