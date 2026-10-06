@@ -208,7 +208,7 @@ def _parse_compiler_value(source: str):
 
     def parse_string():
         nonlocal index
-        start = index
+        start = index - 1
         while index < len(source):
             if source[index] == '"':
                 index += 1
