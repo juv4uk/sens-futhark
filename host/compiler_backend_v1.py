@@ -12,6 +12,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from sens_compiler_request import load_sens_request
+
 ROOT = Path(__file__).resolve().parents[1]
 PROGRAM = ROOT / "futhark" / "compiler_structural.fut"
 
@@ -145,8 +147,6 @@ def main() -> int:
                 raise ContractError(
                     "choose one request source: positional JSON or --sens-request"
                 )
-            from sens_compiler_request import load_sens_request
-
             request = load_sens_request(args.sens_request)
             result = (
                 lower_sens_request(request, args.gpu_mechanism)
@@ -166,7 +166,7 @@ def main() -> int:
                 "valid": True,
                 "request_digest": digest_json(request),
             }
-    except (ContractError, OSError) as exc:
+    except (ContractError, ValueError, OSError) as exc:
         print(f"FAIL-CLOSED: {exc}")
         return 2
 
