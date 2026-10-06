@@ -1,0 +1,93 @@
+name: Compiler-on-GPU research slice
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [ready_for_review]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sens-futhark-compiler-slice
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Compiler GPU slice
+    runs-on: [self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install pinned Futhark
+        run: make bootstrap
+
+      - name: Prove CUDA device contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence/compiler-slice
+          make probe-cuda-json | tee evidence/compiler-slice/cuda-capability.json
+
+      - name: Run bounded compiler-on-GPU experiment
+        shell: bash
+        env:
+          CML_GPU_ADMISSION_LOCK: /run/cml-gpu-worker/gpu-admission.lock
+        run: |
+          set -euo pipefail
+          command -v flock >/dev/null 2>&1 || {
+            echo "ERROR: flock is required for shared GPU admission" >&2
+            exit 2
+          }
+          lock="$CML_GPU_ADMISSION_LOCK"
+          request_ns="$(date +%s%N)"
+          mkdir -p "$(dirname "$lock")"
+          export ADMISSION_LOCK="$lock"
+          export REQUEST_NS="$request_ns"
+
+          flock -x -w 780 "$lock" bash -c '
+            set -euo pipefail
+            acquired_ns="$(date +%s%N)"
+            wait_ns="$((acquired_ns - REQUEST_NS))"
+            owner="${ADMISSION_LOCK}.owner"
+            printf "repository=%s\nrun_id=%s\njob=%s\ncase_id=%s\nresource_key=%s\nadmission_wait_ns=%s\n" \
+              "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "compiler-gpu-slice" "compiler-legality-scan" \
+              "${CML_GPU_RESOURCE_KEY:-cuda:0}" "$wait_ns" > "$owner"
+            trap "rm -f \"$owner\"" EXIT HUP INT TERM
+
+            {
+              echo "repository=$GITHUB_REPOSITORY"
+              echo "run_id=$GITHUB_RUN_ID"
+              echo "job=compiler-gpu-slice"
+              echo "case_id=compiler-legality-scan"
+              echo "resource_key=${CML_GPU_RESOURCE_KEY:-cuda:0}"
+              echo "admission_lock=$ADMISSION_LOCK"
+              echo "admission_wait_ns=$wait_ns"
+            } > evidence/compiler-slice/admission.env
+
+            make benchmark-compiler-slice
+          '
+
+      - name: Publish compiler slice evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "repository_sha=$GITHUB_SHA"
+            echo "run_id=$GITHUB_RUN_ID"
+            echo "backend=cuda"
+            echo "runner=$RUNNER_NAME"
+            echo "policy=bounded-research"
+            echo "gpu_admission=cml#472"
+          } > evidence/compiler-slice/ci.env
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compiler-gpu-slice-${{ github.sha }}
+          path: |
+            evidence/compiler-slice/*.env
+            evidence/compiler-slice/cuda-capability.json
+            bench/results/compiler-slice-*/*

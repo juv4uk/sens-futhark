@@ -18,7 +18,7 @@ SENS_ROOT = ROOT / "vendor" / "sens"
 FIXTURE = "nucleus-d3-100"
 VALID = ROOT / "tests" / "compiler_backend_v1.json"
 TOOL = ROOT / "host" / "compiler_backend_v1.py"
-EXPECTED_COMMIT = "f2e7797283c8dfc2aa67935a02b3735a8290041f"
+EXPECTED_COMMIT = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
 
 
 def cargo_command() -> str:

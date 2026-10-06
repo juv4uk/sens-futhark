@@ -103,6 +103,8 @@ The compiler backend should feed these existing execution pieces instead of repl
 
 Dependencies:
 
+- `juv4uk/sens#3836`: canonical `compiler-compilation-artifact/1` wrapper with
+  byte-exact `semantic-request-sha256`;
 - `juv4uk/sens#3834`: producer-owned `CompilerSemanticInput` library API;
 - `juv4uk/sens#3832`: full D3+D4 nine-role `compiler-semantic-input/1` export;
 - `juv4uk/sens#3801`: GPU admission;
@@ -130,3 +132,26 @@ compile(request)
 must agree with a reference execution over the same backend-neutral request and preserve the request provenance byte-for-byte in the evidence envelope.
 
 No claim of “full SENS compiler on GPU” is made by this first slice.
+
+## GPU compiler research slice (#113)
+
+The first compiler-on-GPU experiment is intentionally narrower than the full
+compiler pipeline: Futhark receives the nine exact compiler identities embedded
+in the canonical SENS `compiler-compilation-artifact/1` outputs and performs a
+bounded legality/property scan over a large deterministic batch. The batch
+expansion is mechanical; it does not derive SENS meaning. The artifact's
+`semantic-request-sha256` is retained as the CPU/GPU parity key and the exact
+producer artifact is preserved in benchmark evidence.
+
+Measurement is split into:
+
+- source request bytes produced by the pinned SENS exporter;
+- seed facts imported to the Futhark/CUDA context;
+- GPU kernel execution;
+- explicit final result materialization;
+- CPU/CUDA steady-state comparison.
+
+The experiment is a falsification lane. A GPU regression or no-crossover result
+is retained as valid evidence. CUDA scheduling remains arbitrated by
+`juv4uk/cml#472`; residency across independent entry-point calls is a separate
+contract (`#88`) and must not be replaced by a second scheduler in this repo.
