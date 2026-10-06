@@ -423,22 +423,27 @@ def main() -> int:
         out,
     )
 
-    nvidia_list = run(
-        ["nvidia-smi", "-L"],
-        env=gpu_env,
-        capture=True,
-        check=False,
-    ).stdout.strip()
-    nvidia_query = run(
-        [
-            "nvidia-smi",
-            "--query-gpu=name,compute_cap,driver_version",
-            "--format=csv,noheader",
-        ],
-        env=gpu_env,
-        capture=True,
-        check=False,
-    ).stdout.strip()
+    nvidia_available = shutil.which("nvidia-smi") is not None
+    if nvidia_available:
+        nvidia_list = run(
+            ["nvidia-smi", "-L"],
+            env=gpu_env,
+            capture=True,
+            check=False,
+        ).stdout.strip()
+        nvidia_query = run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,compute_cap,driver_version",
+                "--format=csv,noheader",
+            ],
+            env=gpu_env,
+            capture=True,
+            check=False,
+        ).stdout.strip()
+    else:
+        nvidia_list = ""
+        nvidia_query = ""
 
     metadata = {
         "schema": 1,
@@ -447,6 +452,7 @@ def main() -> int:
         "git": run(["git", "-C", ROOT, "rev-parse", "HEAD"], capture=True).stdout.strip(),
         "futhark": run([fk, "--version"], capture=True).stdout.strip(),
         "platform": platform.platform(),
+        "nvidia_smi_available": nvidia_available,
         "nvidia_smi_list": nvidia_list,
         "nvidia_smi_query": nvidia_query,
         "sizes": sizes,
