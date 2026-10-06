@@ -59,11 +59,13 @@ test-packed-domain-cuda:
 
 check-compiler-backend:
 	python3 tests/test_compiler_backend_v1.py
+	python3 tests/test_sens_compiler_request.py
 	$(FUTHARK) check -w futhark/compiler_structural.fut
 
 # No CPU fallback: GPU admission is an input fact and CUDA is the only execution backend.
 test-compiler-backend-cuda:
 	python3 tests/test_compiler_backend_v1.py
+	python3 tests/test_sens_compiler_request.py
 	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/compiler_structural.fut
 
 smoke-opencl:
