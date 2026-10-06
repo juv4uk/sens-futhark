@@ -6,6 +6,7 @@ from coordinates, widths, names, or legacy identities.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -28,7 +29,7 @@ EXPECTED_ROLE_AUTHORITY_DIGEST = (
     "9768f683e90cfb56ca95675d1f6ac0e6ede91e21cebe97e20b455cf1b3094791"
 )
 EXPECTED_SOURCE_REPOSITORY = "juv4uk/sens"
-EXPECTED_SOURCE_COMMIT = "f2e7797283c8dfc2aa67935a02b3735a8290041f"
+EXPECTED_SOURCE_COMMIT = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
 EXPECTED_CONTRACT = "11.6"
 
 
@@ -160,4 +161,75 @@ def load_sens_request(path: Path) -> dict:
             "authority_path": authority_path,
             "compiler_nucleus_sha256": nucleus_sha256,
         },
+    }
+
+def _matching_list(source: str, open_index: int) -> str:
+    """Return one balanced S-expression beginning at open_index."""
+    if open_index >= len(source) or source[open_index] != "(":
+        raise SensRequestError("compiler artifact semantic-request is not an S-expression")
+    depth = 0
+    in_string = False
+    escaped = False
+    for index in range(open_index, len(source)):
+        char = source[index]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            continue
+        if char == '"':
+            in_string = True
+            continue
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth == 0:
+                return source[open_index:index + 1]
+    raise SensRequestError("unterminated compiler semantic request")
+
+def load_sens_artifact(path: Path) -> dict:
+    """Load a canonical SENS compiler-compilation-artifact/1 wrapper."""
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SensRequestError(f"cannot read SENS compiler artifact: {exc}") from exc
+
+    if not source.lstrip().startswith("(compilation-artifact"):
+        raise SensRequestError("missing compilation-artifact envelope")
+    schema = _atom_pair(source, "schema")
+    if schema != "compiler-compilation-artifact/1":
+        raise SensRequestError(f"unsupported SENS compiler artifact schema: {schema}")
+
+    fixture_id = _quoted_pair(source, "fixture-id")
+    digest = _quoted_pair(source, "semantic-request-sha256")
+    if not re.fullmatch(r"[0-9a-f]{64}", digest):
+        raise SensRequestError("invalid semantic request digest")
+
+    marker = "(semantic-request ."
+    marker_index = source.find(marker)
+    if marker_index < 0:
+        raise SensRequestError("missing embedded semantic request")
+    request_start = source.find("(", marker_index + len(marker))
+    if request_start < 0:
+        raise SensRequestError("missing embedded compiler semantic request")
+    semantic_request = _matching_list(source, request_start)
+    actual_digest = hashlib.sha256(semantic_request.encode("utf-8")).hexdigest()
+    if actual_digest != digest:
+        raise SensRequestError("semantic request digest mismatch")
+
+    if "(required-capabilities . ())" not in source:
+        raise SensRequestError("compiler artifact capabilities are not empty")
+    artifact_status = _atom_pair(source, "artifact-status")
+    if artifact_status != "canonical-backend-neutral":
+        raise SensRequestError("compiler artifact is not canonical backend-neutral")
+
+    return {
+        "artifact_schema": schema,
+        "fixture_id": fixture_id,
+        "semantic_request_sha256": digest,
+        "semantic_request": semantic_request,
     }
