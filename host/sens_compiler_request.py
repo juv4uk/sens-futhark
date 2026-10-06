@@ -1,0 +1,155 @@
+#!/usr/bin/env python3
+"""Strict transport parser for the canonical SENS compiler-semantic request.
+
+This module consumes facts already derived by SENS. It does not infer a role
+from coordinates, widths, names, or legacy identities.
+"""
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+FORBIDDEN_TARGET_TOKENS = ("cuda", "futhark", "cml", "Sid8", "Sens8")
+
+SENS_ROLE_TO_BACKEND_ROLE = {
+    "quote-form": "QuoteForm",
+    "atom-predicate": "AtomPredicate",
+    "selector-tail": "SelectorTail",
+    "selector-head": "SelectorHead",
+    "atom-equality": "AtomEquality",
+    "cond-form": "CondForm",
+    "pair-construct": "PairConstruct",
+    "lambda-form": "LambdaForm",
+    "define-form": "DefineForm",
+}
+
+EXPECTED_ROLE_AUTHORITY_DIGEST = (
+    "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9"
+)
+EXPECTED_SOURCE_REPOSITORY = "juv4uk/sens"
+EXPECTED_CONTRACT = "11.6"
+
+
+class SensRequestError(ValueError):
+    pass
+
+
+def _quoted_pair(source: str, key: str) -> str:
+    pattern = re.compile(
+        rf'\({re.escape(key)}\s+\.\s+("(?:(?:\\.)|[^"\\])*")\)'
+    )
+    match = pattern.search(source)
+    if match is None:
+        raise SensRequestError(f"missing quoted compiler request field: {key}")
+    try:
+        return json.loads(match.group(2))
+    except json.JSONDecodeError as exc:
+        raise SensRequestError(f"invalid quoted compiler request field: {key}") from exc
+
+
+def _atom_pair(source: str, key: str) -> str:
+    pattern = re.compile(
+        rf"\({re.escape(key)}\s+\.\s+([A-Za-z0-9_./-]+)\)"
+    )
+    match = pattern.search(source)
+    if match is None:
+        raise SensRequestError(f"missing atom compiler request field: {key}")
+    return match.group(1)
+
+
+def _validate_source_shape(source: str) -> None:
+    if not source.lstrip().startswith("(compiler-semantic-request"):
+        raise SensRequestError("missing compiler-semantic-request envelope")
+    lowered = source.casefold()
+    for token in FORBIDDEN_TARGET_TOKENS:
+        if token.casefold() in lowered:
+            raise SensRequestError(
+                f"target/legacy vocabulary leaked into SENS semantic request: {token}"
+            )
+    if "(mechanism-status . unknown)" not in source:
+        raise SensRequestError("SENS request must leave target mechanism status unknown")
+    if "(mechanism-ref . ())" not in source:
+        raise SensRequestError("SENS request must leave target mechanism reference empty")
+
+
+def load_sens_request(path: Path) -> dict:
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SensRequestError(f"cannot read SENS compiler request: {exc}") from exc
+
+    _validate_source_shape(source)
+
+    schema = _atom_pair(source, "schema")
+    if schema != "compiler-semantic-input/1":
+        raise SensRequestError(f"unsupported SENS compiler request schema: {schema}")
+
+    fixture_id = _quoted_pair(source, "fixture-id")
+
+    domain = _atom_pair(source, "domain")
+    bits = _atom_pair(source, "bits")
+    if domain not in {"D1", "D2", "D3", "D4", "D5", "D6", "D7"}:
+        raise SensRequestError(f"SENS compiler request domain is not admitted: {domain}")
+    expected_width = int(domain[1:])
+    if len(bits) != expected_width or any(bit not in "01" for bit in bits):
+        raise SensRequestError(
+            f"SENS compiler request has invalid {domain} bits: {bits!r}"
+        )
+    if domain == "D8":
+        raise SensRequestError("D8 compiler requests are fail-closed")
+
+    authority_ref = _quoted_pair(source, "authority-ref")
+    proof_ref = _quoted_pair(source, "proof-ref")
+    semantic_status = _atom_pair(source, "semantic-status")
+    if semantic_status != "current":
+        raise SensRequestError("SENS compiler request is not current")
+
+    execution_role = _atom_pair(source, "execution-role")
+    try:
+        backend_role = SENS_ROLE_TO_BACKEND_ROLE[execution_role]
+    except KeyError as exc:
+        raise SensRequestError(
+            f"unknown SENS-owned abstract compiler role: {execution_role}"
+        ) from exc
+
+    repository = _quoted_pair(source, "repository")
+    if repository != EXPECTED_SOURCE_REPOSITORY:
+        raise SensRequestError("unexpected semantic authority repository")
+
+    revision = _quoted_pair(source, "revision")
+    if not re.fullmatch(r"[0-9a-f]{40}", revision):
+        raise SensRequestError("invalid SENS source revision")
+    authority_path = _quoted_pair(source, "authority-path")
+    authority_sha256 = _quoted_pair(source, "authority-sha256")
+    if not re.fullmatch(r"[0-9a-f]{64}", authority_sha256):
+        raise SensRequestError("invalid SENS authority digest")
+    if authority_sha256 != EXPECTED_ROLE_AUTHORITY_DIGEST:
+        raise SensRequestError("stale SENS role authority digest")
+    nucleus_sha256 = _quoted_pair(source, "compiler-nucleus-sha256")
+    if not re.fullmatch(r"[0-9a-f]{64}", nucleus_sha256):
+        raise SensRequestError("invalid compiler nucleus digest")
+    contract = _atom_pair(source, "contract")
+    if contract != EXPECTED_CONTRACT:
+        raise SensRequestError(f"unsupported SENS contract: {contract}")
+
+    return {
+        "schema": schema,
+        "fixture_id": fixture_id,
+        "identity": {"domain": domain, "bits": bits},
+        "law": {
+            "authority_ref": authority_ref,
+            "proof_ref": proof_ref,
+            "semantic_status": semantic_status,
+        },
+        "role": backend_role,
+        "sens_role": execution_role,
+        "provenance": {
+            "source_repository": repository,
+            "source_commit": revision,
+            "contract": contract,
+            "role_authority_digest": authority_sha256,
+            "authority_path": authority_path,
+            "compiler_nucleus_sha256": nucleus_sha256,
+        },
+    }
