@@ -375,7 +375,7 @@ def main() -> int:
             [
                 "==",
                 "entry: compiler_legality_scan",
-                f'"compiler-slice-{size}" input {{ [{seed_domains}] [{seed_bits}] [{seed_roles}] {size}i64 }}',
+                f'"compiler-slice-{size}" input {{ [{seed_domains}] [{seed_bits}] {size}i64 }}',
                 f"output {{ [{size}i64] }}",
                 "",
             ]
