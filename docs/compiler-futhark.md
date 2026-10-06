@@ -76,7 +76,7 @@ The first vertical slice is deliberately narrow:
 ```text
 SENS source
   ↓
-SENS-owned role derivation (#3824)
+SENS-owned role derivation (#3834 / compiler_lowering_role_from_sens)
   ↓
 compiler-backend/v1 request
   ↓
@@ -103,10 +103,12 @@ The compiler backend should feed these existing execution pieces instead of repl
 
 Dependencies:
 
-- `juv4uk/sens#3824`: final SENS-owned nine-role compiler closure;
+- `juv4uk/sens#3834`: producer-owned `CompilerSemanticInput` library API;
+- `juv4uk/sens#3832`: full D3+D4 nine-role `compiler-semantic-input/1` export;
 - `juv4uk/sens#3801`: GPU admission;
 - `juv4uk/sens#3802`: compact binary execution packet;
 - `juv4uk/sens#3760`: fixed-point C0→C1→C2 evidence;
+- `juv4uk/cml#622`: independent consumer of the same producer-owned export;
 - `juv4uk/cml#606`: separate native CML IR admission path.
 
 The backend must remain independent of CML-specific mechanism names.
