@@ -191,6 +191,305 @@ def _matching_list(source: str, open_index: int) -> str:
                 return source[open_index:index + 1]
     raise SensRequestError("unterminated compiler semantic request")
 
+
+def _parse_compiler_value(source: str):
+    """Parse the canonical artifact S-expression into SENS value shapes.
+
+    Only the five value kinds admitted by SENS #3846's canonical compiler-value
+    digest are representable here: NIL, Symbol, String and Pair (lists are
+    encoded as nested Pairs ending in NIL).
+    """
+    index = 0
+
+    def skip_ws() -> None:
+        nonlocal index
+        while index < len(source) and source[index].isspace():
+            index += 1
+
+    def parse_string():
+        nonlocal index
+        start = index
+        while index < len(source):
+            if source[index] == '"':
+                index += 1
+                try:
+                    return ("string", json.loads(source[start:index]))
+                except json.JSONDecodeError as exc:
+                    raise SensRequestError("invalid compiler artifact string") from exc
+            if source[index] == "\\":
+                index += 2
+            else:
+                index += 1
+        raise SensRequestError("unterminated compiler artifact string")
+
+    def parse_expr():
+        nonlocal index
+        skip_ws()
+        if index >= len(source):
+            raise SensRequestError("unexpected end of compiler artifact")
+        char = source[index]
+        if char == '"':
+            index += 1
+            return parse_string()
+        if char == "(":
+            index += 1
+            skip_ws()
+            if index < len(source) and source[index] == ")":
+                index += 1
+                return ("nil",)
+
+            head = parse_expr()
+            skip_ws()
+            if index < len(source) and source[index] == ".":
+                index += 1
+                tail = parse_expr()
+                skip_ws()
+                if index >= len(source) or source[index] != ")":
+                    raise SensRequestError("dotted compiler artifact pair is not closed")
+                index += 1
+                return ("pair", head, tail)
+
+            items = [head]
+            while True:
+                skip_ws()
+                if index >= len(source):
+                    raise SensRequestError("unterminated compiler artifact list")
+                if source[index] == ")":
+                    index += 1
+                    value = ("nil",)
+                    for item in reversed(items):
+                        value = ("pair", item, value)
+                    return value
+                items.append(parse_expr())
+
+        start = index
+        while index < len(source) and not source[index].isspace() and source[index] not in "()":
+            index += 1
+        token = source[start:index]
+        if not token or token == ".":
+            raise SensRequestError("invalid compiler artifact atom")
+        return ("symbol", token)
+
+    value = parse_expr()
+    skip_ws()
+    if index != len(source):
+        raise SensRequestError("trailing data after compiler artifact")
+    return value
+
+
+def _value_head_symbol(value, context: str) -> str:
+    if not isinstance(value, tuple) or value[0] != "pair":
+        raise SensRequestError(f"{context} is not a proper compiler artifact list")
+    head = value[1]
+    if not isinstance(head, tuple) or head[0] != "symbol":
+        raise SensRequestError(f"{context} head is not a symbol")
+    return head[1]
+
+
+def _as_proper_list(value, context: str):
+    items = []
+    current = value
+    while True:
+        if current[0] == "nil":
+            return items
+        if current[0] != "pair":
+            raise SensRequestError(f"{context} is not a proper list")
+        items.append(current[1])
+        current = current[2]
+
+
+def _field_map(artifact_value):
+    fields = _as_proper_list(artifact_value, "compiler artifact")
+    if not fields or not (
+        isinstance(artifact_value[1], tuple)
+        and artifact_value[1][0] == "symbol"
+    ):
+        raise SensRequestError("compiler artifact has no envelope symbol")
+    if artifact_value[1][1] != "compilation-artifact":
+        raise SensRequestError("missing compilation-artifact envelope")
+
+    result = {}
+    ordered = []
+    for field in fields[1:]:
+        if not isinstance(field, tuple) or field[0] != "pair":
+            raise SensRequestError("compiler artifact field is not a dotted pair")
+        key = field[1]
+        if not isinstance(key, tuple) or key[0] != "symbol":
+            raise SensRequestError("compiler artifact field name is not a symbol")
+        name = key[1]
+        if name in result:
+            raise SensRequestError(f"duplicate compiler artifact field: {name}")
+        result[name] = field[2]
+        ordered.append(name)
+    return ordered, result
+
+
+def _symbol_value(value, key: str) -> str:
+    if not isinstance(value, tuple) or value[0] != "symbol":
+        raise SensRequestError(f"compiler artifact field {key} must be a symbol")
+    return value[1]
+
+
+def _string_value(value, key: str) -> str:
+    if not isinstance(value, tuple) or value[0] != "string":
+        raise SensRequestError(f"compiler artifact field {key} must be a string")
+    return value[1]
+
+
+def _encode_canonical_compiler_value(value, out: bytearray) -> None:
+    kind = value[0]
+    if kind == "nil":
+        out.append(0x00)
+        return
+    if kind == "symbol":
+        raw = value[1].encode("utf-8")
+        out.append(0x02)
+        out.extend(len(raw).to_bytes(8, "little", signed=False))
+        out.extend(raw)
+        return
+    if kind == "string":
+        raw = value[1].encode("utf-8")
+        out.append(0x03)
+        out.extend(len(raw).to_bytes(8, "little", signed=False))
+        out.extend(raw)
+        return
+    if kind == "pair":
+        out.append(0x04)
+        _encode_canonical_compiler_value(value[1], out)
+        _encode_canonical_compiler_value(value[2], out)
+        return
+    raise SensRequestError(
+        f"unsupported compiler artifact value kind in canonical digest: {kind}"
+    )
+
+
+def _canonical_value_sha256(value) -> str:
+    encoded = bytearray()
+    _encode_canonical_compiler_value(value, encoded)
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def load_sens_whole_program_artifact(
+    path: Path,
+    *,
+    program_wire: bytes | None = None,
+) -> dict:
+    """Load the canonical SENS whole-program compiler-compilation-artifact/1.
+
+    SENS chooses the semantic-request sequence and its digest. This consumer
+    verifies the exact representation-only digest and provenance envelope; it
+    never walks program nodes or reconstructs semantic requests.
+    """
+    try:
+        source = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SensRequestError(
+            f"cannot read SENS whole-program artifact: {exc}"
+        ) from exc
+
+    if not source.lstrip().startswith("(compilation-artifact"):
+        raise SensRequestError("missing compilation-artifact envelope")
+
+    value = _parse_compiler_value(source)
+    ordered, fields = _field_map(value)
+    expected_order = [
+        "schema",
+        "artifact-kind",
+        "program-wire-sha256",
+        "semantic-requests-sha256",
+        "authority-provenance",
+        "semantic-requests",
+        "required-capabilities",
+        "artifact-status",
+    ]
+    if ordered != expected_order:
+        raise SensRequestError(
+            "whole-program compiler artifact field order/shape is not canonical"
+        )
+
+    schema = _symbol_value(fields["schema"], "schema")
+    if schema != "compiler-compilation-artifact/1":
+        raise SensRequestError(
+            f"unsupported SENS compiler artifact schema: {schema}"
+        )
+
+    artifact_kind = _symbol_value(fields["artifact-kind"], "artifact-kind")
+    if artifact_kind != "whole-program":
+        raise SensRequestError("compiler artifact is not whole-program")
+
+    program_wire_sha256 = _string_value(
+        fields["program-wire-sha256"], "program-wire-sha256"
+    )
+    if not re.fullmatch(r"[0-9a-f]{64}", program_wire_sha256):
+        raise SensRequestError("invalid program-wire-sha256")
+    if program_wire is not None:
+        actual_program_sha256 = hashlib.sha256(program_wire).hexdigest()
+        if actual_program_sha256 != program_wire_sha256:
+            raise SensRequestError("program wire digest mismatch")
+
+    semantic_requests_sha256 = _string_value(
+        fields["semantic-requests-sha256"], "semantic-requests-sha256"
+    )
+    if not re.fullmatch(r"[0-9a-f]{64}", semantic_requests_sha256):
+        raise SensRequestError("invalid semantic-requests-sha256")
+
+    actual_semantic_requests_sha256 = _canonical_value_sha256(
+        fields["semantic-requests"]
+    )
+    if actual_semantic_requests_sha256 != semantic_requests_sha256:
+        raise SensRequestError("semantic requests digest mismatch")
+
+    provenance = _as_proper_list(
+        fields["authority-provenance"], "authority-provenance"
+    )
+    if len(provenance) != 5:
+        raise SensRequestError("authority-provenance must contain exactly 5 values")
+    provenance_values = []
+    for index, item in enumerate(provenance):
+        if not isinstance(item, tuple) or item[0] != "string":
+            raise SensRequestError(
+                f"authority-provenance value {index} must be a string"
+            )
+        provenance_values.append(item[1])
+
+    sens_revision, authority_path, authority_sha256, contract, nucleus_sha256 = (
+        provenance_values
+    )
+    if sens_revision != "5964c4dd2378364a5307b143a65438f8609fecd6":
+        raise SensRequestError("stale SENS whole-program revision")
+    if authority_path != "language-contract.lisp":
+        raise SensRequestError("unexpected SENS compiler authority path")
+    if authority_sha256 != EXPECTED_ROLE_AUTHORITY_DIGEST:
+        raise SensRequestError("stale SENS compiler authority digest")
+    if contract != EXPECTED_CONTRACT:
+        raise SensRequestError("unsupported SENS compiler contract")
+    if not re.fullmatch(r"[0-9a-f]{64}", nucleus_sha256):
+        raise SensRequestError("invalid compiler-nucleus source digest")
+
+    if fields["required-capabilities"][0] != "nil":
+        raise SensRequestError("whole-program artifact capabilities must be empty")
+
+    artifact_status = _symbol_value(fields["artifact-status"], "artifact-status")
+    if artifact_status != "canonical-backend-neutral":
+        raise SensRequestError("compiler artifact is not canonical backend-neutral")
+
+    return {
+        "artifact_schema": schema,
+        "artifact_kind": artifact_kind,
+        "program_wire_sha256": program_wire_sha256,
+        "semantic_requests_sha256": semantic_requests_sha256,
+        "semantic_requests": fields["semantic-requests"],
+        "authority_provenance": {
+            "sens_revision": sens_revision,
+            "authority_path": authority_path,
+            "authority_sha256": authority_sha256,
+            "contract": contract,
+            "compiler_nucleus_sha256": nucleus_sha256,
+        },
+        "required_capabilities": (),
+        "artifact_status": artifact_status,
+    }
+
 def load_sens_artifact(path: Path) -> dict:
     """Load a canonical SENS compiler-compilation-artifact/1 wrapper."""
     try:
