@@ -9,7 +9,7 @@
                          (mechanism-status . unknown)
                          (mechanism-ref . ())))
            (provenance . ((repository . "juv4uk/sens")
-                          (revision . "08db33ced8643aedaa7de35cb61407900c0b0c05")
+                          (revision . "c3878ef2be03894a46bde8263f75138adf276798")
                           (authority-path . "knowledge/bija3-l1-l5-structure-projection.json")
                           (authority-sha256 . "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9")
                           (contract . 11.6))))
