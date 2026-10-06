@@ -42,21 +42,30 @@ jobs:
           }
           lock="$CML_GPU_ADMISSION_LOCK"
           request_ns="$(date +%s%N)"
-          export REQUEST_NS="$request_ns"
           mkdir -p "$(dirname "$lock")"
+          export ADMISSION_LOCK="$lock"
+          export REQUEST_NS="$request_ns"
 
           flock -x -w 780 "$lock" bash -c '
             set -euo pipefail
             acquired_ns="$(date +%s%N)"
             wait_ns="$((acquired_ns - REQUEST_NS))"
+            owner="${ADMISSION_LOCK}.owner"
+            printf "repository=%s\nrun_id=%s\njob=%s\ncase_id=%s\nresource_key=%s\nadmission_wait_ns=%s\n" \
+              "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" "compiler-gpu-slice" "compiler-legality-scan" \
+              "${CML_GPU_RESOURCE_KEY:-cuda:0}" "$wait_ns" > "$owner"
+            trap "rm -f \"$owner\"" EXIT HUP INT TERM
+
             {
               echo "repository=$GITHUB_REPOSITORY"
               echo "run_id=$GITHUB_RUN_ID"
               echo "job=compiler-gpu-slice"
               echo "case_id=compiler-legality-scan"
               echo "resource_key=${CML_GPU_RESOURCE_KEY:-cuda:0}"
+              echo "admission_lock=$ADMISSION_LOCK"
               echo "admission_wait_ns=$wait_ns"
             } > evidence/compiler-slice/admission.env
+
             make benchmark-compiler-slice
           '
 
