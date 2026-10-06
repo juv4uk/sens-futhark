@@ -6,10 +6,10 @@
     "contract": "11.6",
     "role_authority_digest": "9768f683e90cfb56ca95675d1f6ac0e6ede91e21cebe97e20b455cf1b3094791"
   },
-  "role": "PairConstruct",
+  "role": "SelectorHead",
   "admission": {
     "gpu": true,
-    "mechanism": "futhark.structural.pair-v1"
+    "mechanism": "futhark.structural.selector-head-v1"
   },
   "payload": {
     "left": [1, 2, 3],
