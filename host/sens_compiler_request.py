@@ -31,6 +31,8 @@ EXPECTED_ROLE_AUTHORITY_DIGEST = (
 EXPECTED_SOURCE_REPOSITORY = "juv4uk/sens"
 EXPECTED_SOURCE_COMMIT = "1869fd5e51f38565ca968abceaa4bc933ae7a114"
 EXPECTED_CONTRACT = "11.6"
+EXPECTED_SENS_REVISION = "5964c4dd2378364a5307b143a65438f8609fecd6"
+EXPECTED_COMPILER_NUCLEUS_SHA256 = "681b7d0ddc918ce57b1ec8f6243bfc2428ef2ebf5c0835c83a3d040628e8c10f"
 
 
 class SensRequestError(ValueError):
@@ -461,7 +463,7 @@ def load_sens_whole_program_artifact(
     sens_revision, authority_path, authority_sha256, contract, nucleus_sha256 = (
         provenance_values
     )
-    if sens_revision != "5964c4dd2378364a5307b143a65438f8609fecd6":
+    if sens_revision != EXPECTED_SENS_REVISION:
         raise SensRequestError("stale SENS whole-program revision")
     if authority_path != "language-contract.lisp":
         raise SensRequestError("unexpected SENS compiler authority path")
@@ -471,6 +473,8 @@ def load_sens_whole_program_artifact(
         raise SensRequestError("unsupported SENS compiler contract")
     if not re.fullmatch(r"[0-9a-f]{64}", nucleus_sha256):
         raise SensRequestError("invalid compiler-nucleus source digest")
+    if nucleus_sha256 != EXPECTED_COMPILER_NUCLEUS_SHA256:
+        raise SensRequestError("stale compiler-nucleus source digest")
 
     if fields["required-capabilities"][0] != "nil":
         raise SensRequestError("whole-program artifact capabilities must be empty")
