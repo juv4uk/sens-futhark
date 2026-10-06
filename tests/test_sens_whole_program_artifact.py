@@ -15,12 +15,12 @@ from sens_compiler_request import SensRequestError, load_sens_whole_program_arti
 
 PROGRAM_WIRE = b"SW\x01test\n"
 PROGRAM_WIRE_SHA256 = "0724f53216b312098cb069e9363e824b89c0259a401d1d355a5bab9cd436fb68"
-SEMANTIC_REQUESTS_SHA256 = "46f19a756a967ae8878275201153a52146e551b72c302607476934545ff13967"
+SEMANTIC_REQUESTS_SHA256 = "187efd31292c743211fd370c0d8476b4077513c0e9433310d3db22f046c0a05c"
 SENS_REVISION = "5964c4dd2378364a5307b143a65438f8609fecd6"
 AUTHORITY_SHA256 = (
     "9768f683e90cfb56ca95675d1f6ac0e6ede91e21cebe97e20b455cf1b3094791"
 )
-FIXTURE_NUCLEUS_SHA256 = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+FIXTURE_NUCLEUS_SHA256 = "681b7d0ddc918ce57b1ec8f6243bfc2428ef2ebf5c0835c83a3d040628e8c10f"
 
 
 def artifact_text() -> str:
@@ -30,7 +30,7 @@ def artifact_text() -> str:
   (program-wire-sha256 . "{PROGRAM_WIRE_SHA256}")
   (semantic-requests-sha256 . "{SEMANTIC_REQUESTS_SHA256}")
   (authority-provenance . ("{SENS_REVISION}" "language-contract.lisp" "{AUTHORITY_SHA256}" "11.6" "{FIXTURE_NUCLEUS_SHA256}"))
-  (semantic-requests . ((alpha)))
+  (semantic-requests . ((001 alpha)))
   (required-capabilities . ())
   (artifact-status . canonical-backend-neutral))
 """
@@ -68,7 +68,7 @@ def main() -> int:
             program_wire=b"SW\x01tampered\n",
         )
         expect_failure(
-            artifact_text().replace("(semantic-requests . ((alpha)))", "(semantic-requests . ((beta)))"),
+            artifact_text().replace("(semantic-requests . ((001 alpha)))", "(semantic-requests . ((001 beta)))"),
             "semantic requests digest mismatch",
         )
         expect_failure(
