@@ -103,6 +103,8 @@ The compiler backend should feed these existing execution pieces instead of repl
 
 Dependencies:
 
+- `juv4uk/sens#3836`: canonical `compiler-compilation-artifact/1` wrapper with
+  byte-exact `semantic-request-sha256`;
 - `juv4uk/sens#3834`: producer-owned `CompilerSemanticInput` library API;
 - `juv4uk/sens#3832`: full D3+D4 nine-role `compiler-semantic-input/1` export;
 - `juv4uk/sens#3801`: GPU admission;
@@ -134,10 +136,12 @@ No claim of “full SENS compiler on GPU” is made by this first slice.
 ## GPU compiler research slice (#113)
 
 The first compiler-on-GPU experiment is intentionally narrower than the full
-compiler pipeline: Futhark receives nine already-derived SENS compiler requests,
-encoded as exact domain/bits plus an abstract role tag, and performs a bounded
-legality/property scan over a large deterministic batch. The batch expansion is
-mechanical; it does not derive SENS meaning.
+compiler pipeline: Futhark receives the nine exact compiler identities embedded
+in the canonical SENS `compiler-compilation-artifact/1` outputs and performs a
+bounded legality/property scan over a large deterministic batch. The batch
+expansion is mechanical; it does not derive SENS meaning. The artifact's
+`semantic-request-sha256` is retained as the CPU/GPU parity key and the exact
+producer artifact is preserved in benchmark evidence.
 
 Measurement is split into:
 
