@@ -28,6 +28,7 @@ EXPECTED_ROLE_AUTHORITY_DIGEST = (
     "a4d914073bc1a26f3721d404ac74894b99fe057159da76346ad2092a771bdfc9"
 )
 EXPECTED_SOURCE_REPOSITORY = "juv4uk/sens"
+EXPECTED_SOURCE_COMMIT = "08db33ced8643aedaa7de35cb61407900c0b0c05"
 EXPECTED_CONTRACT = "11.6"
 
 
@@ -89,6 +90,8 @@ def load_sens_request(path: Path) -> dict:
 
     domain = _atom_pair(source, "domain")
     bits = _atom_pair(source, "bits")
+    if domain == "D8":
+        raise SensRequestError("D8 compiler requests are fail-closed")
     if domain not in {"D1", "D2", "D3", "D4", "D5", "D6", "D7"}:
         raise SensRequestError(f"SENS compiler request domain is not admitted: {domain}")
     expected_width = int(domain[1:])
@@ -96,9 +99,6 @@ def load_sens_request(path: Path) -> dict:
         raise SensRequestError(
             f"SENS compiler request has invalid {domain} bits: {bits!r}"
         )
-    if domain == "D8":
-        raise SensRequestError("D8 compiler requests are fail-closed")
-
     authority_ref = _quoted_pair(source, "authority-ref")
     proof_ref = _quoted_pair(source, "proof-ref")
     semantic_status = _atom_pair(source, "semantic-status")
@@ -120,6 +120,8 @@ def load_sens_request(path: Path) -> dict:
     revision = _quoted_pair(source, "revision")
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise SensRequestError("invalid SENS source revision")
+    if revision != EXPECTED_SOURCE_COMMIT:
+        raise SensRequestError("stale SENS source revision")
     authority_path = _quoted_pair(source, "authority-path")
     authority_sha256 = _quoted_pair(source, "authority-sha256")
     if not re.fullmatch(r"[0-9a-f]{64}", authority_sha256):
