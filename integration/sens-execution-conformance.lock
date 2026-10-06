@@ -1,7 +1,7 @@
 # SENS execution-conformance upstream pin
 # Source: juv4uk/sens main, compiler-inclusive stable point after sens#3836
 SENS_REPOSITORY=juv4uk/sens
-SENS_COMMIT=1c052b75a63a640ded2283a9bc7a164c3eefb114
+SENS_COMMIT=5964c4dd2378364a5307b143a65438f8609fecd6
 SENS_CONTRACT=11.6
 SENS_EXECUTION_SCHEMA=sens-execution-conformance/v1
 SENS_CURRENT_DOMAINS=D1,D2,D3,D4,D5,D6,D7
