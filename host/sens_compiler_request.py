@@ -217,6 +217,9 @@ def load_sens_artifact(path: Path) -> dict:
     if request_start < 0:
         raise SensRequestError("missing embedded compiler semantic request")
     semantic_request = _matching_list(source, request_start)
+    inner_fixture = _quoted_pair(semantic_request, "fixture-id")
+    if inner_fixture != fixture_id:
+        raise SensRequestError("artifact fixture-id disagrees with embedded request")
     actual_digest = hashlib.sha256(semantic_request.encode("utf-8")).hexdigest()
     if actual_digest != digest:
         raise SensRequestError("semantic request digest mismatch")
