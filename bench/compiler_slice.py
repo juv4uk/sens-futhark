@@ -317,6 +317,9 @@ def run_transfer_probe(
                 "elements": size,
                 "h2d_import_bytes": subset[0]["h2d_import_bytes"],
                 "d2h_export_bytes": subset[0]["d2h_export_bytes"],
+                "resident_payload_bytes": (
+                    subset[0]["h2d_import_bytes"] + subset[0]["d2h_export_bytes"]
+                ),
                 "h2d_import_median_us": h2d / 1000.0,
                 "kernel_median_us": kernel / 1000.0,
                 "d2h_export_median_us": d2h / 1000.0,
@@ -447,6 +450,7 @@ def main() -> int:
             len(artifact["semantic_request"].encode("utf-8")) for artifact in artifacts
         ),
         "seed_request_bytes": len(domains) * 3 * 4,
+        "resident_payload_bytes": len(domains) * 3 * 4 + 8,
         "entry": "compiler_legality_scan",
         "raw": {"c": "c.json", "cuda": "cuda.json", "transfer": "transfer_raw.csv"},
         "summary": summary,
