@@ -195,9 +195,8 @@ def _matching_list(source: str, open_index: int) -> str:
 def _parse_compiler_value(source: str):
     """Parse the canonical artifact S-expression into SENS value shapes.
 
-    Only the five value kinds admitted by SENS #3846's canonical compiler-value
-    digest are representable here: NIL, Symbol, String and Pair (lists are
-    encoded as nested Pairs ending in NIL).
+    The admitted compiler-value kinds are NIL, exact DomainIdentity, Symbol,
+    String and Pair (lists are encoded as nested Pairs ending in NIL).
     """
     index = 0
 
@@ -268,6 +267,8 @@ def _parse_compiler_value(source: str):
         token = source[start:index]
         if not token or token == ".":
             raise SensRequestError("invalid compiler artifact atom")
+        if re.fullmatch(r"[01]{1,8}", token):
+            return ("domain", len(token), int(token, 2))
         return ("symbol", token)
 
     value = parse_expr()
@@ -340,6 +341,11 @@ def _encode_canonical_compiler_value(value, out: bytearray) -> None:
     kind = value[0]
     if kind == "nil":
         out.append(0x00)
+        return
+    if kind == "domain":
+        out.append(0x01)
+        out.append(value[1])
+        out.append(value[2])
         return
     if kind == "symbol":
         raw = value[1].encode("utf-8")
