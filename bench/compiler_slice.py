@@ -159,20 +159,28 @@ def parse_requests(requests: list[str]) -> tuple[list[int], list[int], list[int]
     }
 
 
-def bench(fk: Path, backend: str, spec: Path, out_json: Path, env: dict[str, str], runs: int):
-    run(
-        [
-            fk,
-            "bench",
-            PROGRAM,
-            f"--backend={backend}",
-            f"--spec-file={spec}",
-            f"--runs={runs}",
-            "--no-convergence-phase",
-            f"--json={out_json}",
-        ],
-        env=env,
-    )
+def bench(
+    fk: Path,
+    backend: str,
+    spec: Path,
+    out_json: Path,
+    env: dict[str, str],
+    runs: int,
+    profile: bool = False,
+):
+    command = [
+        fk,
+        "bench",
+        PROGRAM,
+        f"--backend={backend}",
+        f"--spec-file={spec}",
+        f"--runs={runs}",
+        "--no-convergence-phase",
+        f"--json={out_json}",
+    ]
+    if profile:
+        command.append("--profile")
+    run(command, env=env)
 
 
 def build_transfer_probe(fk: Path, out: Path, env: dict[str, str]) -> Path:
@@ -318,7 +326,7 @@ def main() -> int:
             [
                 "==",
                 "entry: compiler_legality_scan",
-                f"input {{ [{seed_domains}] [{seed_bits}] [{seed_roles}] {size}i64 }}",
+                f'"compiler-slice-{size}" input {{ [{seed_domains}] [{seed_bits}] [{seed_roles}] {size}i64 }}',
                 f"output {{ [{size}i64] }}",
                 "",
             ]
@@ -330,7 +338,7 @@ def main() -> int:
     c_json = out / "c.json"
     cuda_json = out / "cuda.json"
     bench(fk, "c", spec, c_json, base_env, args.runs)
-    bench(fk, "cuda", spec, cuda_json, gpu_env, args.runs)
+    bench(fk, "cuda", spec, cuda_json, gpu_env, args.runs, profile=True)
 
     c_data = json.loads(c_json.read_text(encoding="utf-8"))
     g_data = json.loads(cuda_json.read_text(encoding="utf-8"))
@@ -338,7 +346,7 @@ def main() -> int:
     gsets = next(iter(g_data.values()))["datasets"]
     summary = []
     for size in sizes:
-        key = f"compiler_legality_scan-{size}"
+        key = f"compiler-slice-{size}"
         if key not in csets or key not in gsets:
             raise SystemExit(f"missing benchmark dataset for {size}")
         cmed = statistics.median(csets[key]["runtimes"])
@@ -387,6 +395,9 @@ def main() -> int:
             "role_authority_digest": provenance["role_authority_digest"],
             "rows": provenance["rows"],
         },
+        "source_request_bytes": sum(
+            len(request.encode("utf-8")) for request in requests
+        ),
         "seed_request_bytes": len(domains) * 3 * 4,
         "entry": "compiler_legality_scan",
         "raw": {"c": "c.json", "cuda": "cuda.json", "transfer": "transfer_raw.csv"},
