@@ -130,3 +130,24 @@ compile(request)
 must agree with a reference execution over the same backend-neutral request and preserve the request provenance byte-for-byte in the evidence envelope.
 
 No claim of “full SENS compiler on GPU” is made by this first slice.
+
+## GPU compiler research slice (#113)
+
+The first compiler-on-GPU experiment is intentionally narrower than the full
+compiler pipeline: Futhark receives nine already-derived SENS compiler requests,
+encoded as exact domain/bits plus an abstract role tag, and performs a bounded
+legality/property scan over a large deterministic batch. The batch expansion is
+mechanical; it does not derive SENS meaning.
+
+Measurement is split into:
+
+- source request bytes produced by the pinned SENS exporter;
+- seed facts imported to the Futhark/CUDA context;
+- GPU kernel execution;
+- explicit final result materialization;
+- CPU/CUDA steady-state comparison.
+
+The experiment is a falsification lane. A GPU regression or no-crossover result
+is retained as valid evidence. CUDA scheduling remains arbitrated by
+`juv4uk/cml#472`; residency across independent entry-point calls is a separate
+contract (`#88`) and must not be replaced by a second scheduler in this repo.
