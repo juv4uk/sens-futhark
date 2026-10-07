@@ -15,7 +15,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  hosted-structural:
+    name: Hosted structural checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install pinned Futhark
+        run: make bootstrap
+      - name: Validate Futhark programs without claiming GPU execution
+        run: |
+          make check
+          make check-identity
+          make check-packed-domain
+          make check-compiler-backend
+
   cuda:
+    if: vars.LOCAL_HARDWARE_RUNNERS == 'true'
     name: CUDA-only witness
     # Fail closed onto the GPU-capable runner. Never fall back to an ordinary CPU runner.
     runs-on: [self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]
