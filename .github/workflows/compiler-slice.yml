@@ -13,7 +13,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  hosted-legality:
+    name: Hosted compiler legality checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install pinned Futhark
+        run: make bootstrap
+      - name: Validate compiler bridge structurally
+        run: make check-compiler-backend
+
   benchmark:
+    if: vars.LOCAL_HARDWARE_RUNNERS == 'true'
     name: Compiler GPU slice
     runs-on: [self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]
     timeout-minutes: 30
