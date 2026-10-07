@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The common execution seam (SENS-BRIDGE, #121).
+"""The common execution seam (SENS-BRIDGE, #121; SENS D10 authority: sens#4126).
 
 This repository is a BACKEND / MECHANISM owner. It must NOT mint Core
 semantic identities from backend-native operations. It adopts only the
