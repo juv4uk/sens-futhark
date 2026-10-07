@@ -1,0 +1,17 @@
+{
+  "backend": "sens-futhark",
+  "kind": "EXECUTION-WITNESS",
+  "native": {
+    "bridge": null,
+    "kernel": "k.double"
+  },
+  "observation": {
+    "multiplicity": "ONE",
+    "native": 42
+  },
+  "result_count": 1,
+  "schema": "island-witness/v1",
+  "seam": "ISLAND-CALL",
+  "semantic_identity": "core:opaque-sentinel-do-not-parse",
+  "status": "OK"
+}
