@@ -22,21 +22,29 @@ make sens-cli-parity
 ```bash
 make bootstrap
 make check-identity
-make test-identity-cuda   # єдиний CI-шлях: self-hosted CUDA
+make test-identity-cuda   # лише на підтвердженій CUDA-машині
 ```
 
 `make test-identity-cpu` існує, але це **reference-only** — локальний семантичний референс, а не шлях релізу й не CI-лейн (див. політику нижче).
 
-### CI (GPU-only, #79)
+### CI: GitHub-hosted execution versus CUDA (#79)
 
-Єдиний воркфлоу — `.github/workflows/futhark.yml` (`GPU-only CUDA witnesses`).
+Чинні `futhark.yml` та `compiler-slice.yml` запускають структурні
+перевірки на `ubuntu-24.04` — **це не GPU-бенчмарки**. CUDA-гілки
+допускаються лише за окремою умовою, але стандартний Ubuntu runner не
+гарантує відеокарту. Якщо CUDA job пропущено, апаратна перевірка має
+статус **UNVERIFIED** навіть тоді, коли workflow показує загальний
+`success` за рахунок структурних jobs.
 
-| job | runs-on | status |
-|-----|---------|--------|
-| `CUDA-only witness` (`futhark.yml`) | `[self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]` | **green on main** (run 37377715294) |
-| OpenCL | — | **BLOCKED** −1001 |
+Перевірка маршрутизації —
+`.github/workflows/hosted-runner-routing-policy.yml`.
+Ніякої маршрутизації на локальні `self-hosted` ранери.
+Планований окремий GPU fail-closed gate описано в PR #124; доки він не
+ратифікований і не злитий, **не використовувати загальну зелену позначку
+`futhark.yml` як доказ CUDA чи як достатню умову випуску**.
 
-CPU-лейни в CI **немає**: `cpu-witness.yml` видалено, а спроба #75 винести CPU на `ubuntu-24.04` впала **до першого кроку** і була відкочена. CUDA недоступна ⇒ job падає **fail-closed**, без фолбеку на `--backend=c`.
+Попередні запуски GTX 1050 Ti / CUDA 12.6 є історичними свідченнями
+конкретного локального хоста, а не живим GitHub-hosted GPU evidence.
 
 ## Evidence manifest
 
@@ -52,7 +60,7 @@ Manifest заповнюється **з артефактів живого зел�
 
 | статус | предмет |
 |--------|----------|
-| **CONFIRMED** | pin + entrypoint; CUDA witness зелений на main (self-hosted, GTX 1050 Ti) |
+| **CONFIRMED** | pin + entrypoint; старі локальні CUDA-свідчення збережені як історичні |
 | **REFERENCE** | CPU witness — внутрішній семантичний референс, не delivery-доказ (GPU-only #79) |
 | **BLOCKED** | OpenCL WSL (−1001) |
 | **UNRESOLVED** | upstream fixture import (#31 / sens#3560) |
