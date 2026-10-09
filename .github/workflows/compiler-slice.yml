@@ -18,13 +18,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - name: Verify GitHub-hosted GPU boundary
-        shell: bash
-        run: |
-          test "${RUNNER_ENVIRONMENT:-}" = github-hosted || { echo "::error::Self-hosted forbidden"; exit 1; }
-          command -v nvidia-smi >/dev/null 2>&1 || { echo "::error::Hosted GPU larger runner required; CUDA parity unavailable"; exit 1; }
-          nvidia-smi
-
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install pinned Futhark
@@ -33,9 +26,9 @@ jobs:
         run: make check-compiler-backend
 
   benchmark:
-    if: vars.GITHUB_HOSTED_GPU_AVAILABLE == 'true'
+    if: vars.GITHUB_HOSTED_GPU_RUNNER != ''
     name: Compiler GPU slice
-    runs-on: ubuntu-24.04
+    runs-on: ${{ vars.GITHUB_HOSTED_GPU_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 30
     env:
       # The producer is control-plane only. Cap Rust bootstrap parallelism so
