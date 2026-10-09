@@ -130,3 +130,27 @@ jobs:
             evidence/futhark/cuda-capability.json
             evidence/futhark/admission.env
             evidence/futhark/gpu-worker-parity.json
+
+  gate:
+    name: GPU-only lane gate (fail closed)
+    needs: [hosted-structural, cuda]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Fail closed if the CUDA witness did not execute
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "hosted-structural: ${{ needs.hosted-structural.result }}"
+          echo "cuda: ${{ needs.cuda.result }}"
+          if [ "${{ needs.hosted-structural.result }}" != "success" ]; then
+            echo "ERROR: hosted structural checks did not succeed." >&2
+            exit 1
+          fi
+          if [ "${{ needs.cuda.result }}" != "success" ]; then
+            echo "ERROR: the CUDA witness did not execute (cuda result: ${{ needs.cuda.result }})." >&2
+            echo "The GPU-only lane must not report green without a real CUDA witness." >&2
+            exit 1
+          fi
+          echo "GPU-only lane gate: OK - CUDA witness executed."
