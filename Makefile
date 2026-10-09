@@ -61,12 +61,15 @@ check-compiler-backend: sens-fetch
 	python3 tests/test_compiler_backend_v1.py
 	python3 tests/test_sens_compiler_request.py
 	python3 tests/test_sens_compiler_artifact.py
+	python3 tests/test_sens_whole_program_artifact.py
 	$(FUTHARK) check -w futhark/compiler_structural.fut
 
 # No CPU fallback: GPU admission is an input fact and CUDA is the only execution backend.
 test-compiler-backend-cuda: sens-fetch
 	python3 tests/test_compiler_backend_v1.py
 	python3 tests/test_sens_compiler_request.py
+	python3 tests/test_sens_compiler_artifact.py
+	python3 tests/test_sens_whole_program_artifact.py
 	bash "$(CUDA_ENV)" run "$(FUTHARK)" test --backend=cuda futhark/compiler_structural.fut
 
 # Manual research lane for #113: real SENS producer -> compiler legality scan -> CPU/CUDA evidence.
