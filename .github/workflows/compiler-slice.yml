@@ -28,7 +28,7 @@ jobs:
   benchmark:
     if: vars.GITHUB_HOSTED_GPU_RUNNER != ''
     name: Compiler GPU slice
-    runs-on: ${{ vars.GITHUB_HOSTED_GPU_RUNNER || 'ubuntu-24.04' }}
+    runs-on: ubuntu-24.04  # fixed GitHub-hosted image; no variable-driven routing
     timeout-minutes: 30
     env:
       # The producer is control-plane only. Cap Rust bootstrap parallelism so
