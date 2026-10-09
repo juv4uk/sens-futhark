@@ -20,6 +20,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
+      - name: Verify GitHub-hosted GPU boundary
+        shell: bash
+        run: |
+          test "${RUNNER_ENVIRONMENT:-}" = github-hosted || { echo "::error::Self-hosted forbidden"; exit 1; }
+          command -v nvidia-smi >/dev/null 2>&1 || { echo "::error::Hosted GPU larger runner required; CUDA parity unavailable"; exit 1; }
+          nvidia-smi
+
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - name: Install pinned Futhark
@@ -32,10 +39,10 @@ jobs:
           make check-compiler-backend
 
   cuda:
-    if: vars.LOCAL_HARDWARE_RUNNERS == 'true'
+    if: vars.GITHUB_HOSTED_GPU_AVAILABLE == 'true'
     name: CUDA-only witness
     # Fail closed onto the GPU-capable runner. Never fall back to an ordinary CPU runner.
-    runs-on: [self-hosted, Linux, X64, gpu, cuda-12.6, sens-futhark]
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       # Cargo is bootstrap/control-plane only; do not let it saturate the host CPU.
