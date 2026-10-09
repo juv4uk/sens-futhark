@@ -1,0 +1,48 @@
+name: Hosted-only Actions runner routing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  enforce-hosted:
+    name: Reject local and unknown runner labels
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Attest GitHub-owned runner environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$RUNNER_ENVIRONMENT" != "github-hosted" ]]; then
+            echo "::error::Execution was not on a GitHub-hosted runner"
+            exit 1
+          fi
+          echo "runner=$RUNNER_NAME environment=$RUNNER_ENVIRONMENT"
+      - uses: actions/checkout@v4
+      - name: Verify every workflow route
+        shell: bash
+        run: bash tools/check-gpu-single-lane.sh
+      - name: Negative route regression examples
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          trap 'rm -rf "$root"' EXIT
+          mkdir -p "$root/.github/workflows"
+          printf 'jobs:\n  audit:\n    runs-on: ubuntu-24.04\n' > "$root/.github/workflows/audit.yml"
+          bash tools/check-gpu-single-lane.sh "$root"
+          for bad in 'self-hosted' '[self-hosted, Linux]' 'custom-runner'; do
+            printf 'jobs:\n  audit:\n    runs-on: %s\n' "$bad" > "$root/.github/workflows/audit.yml"
+            if bash tools/check-gpu-single-lane.sh "$root"; then
+              echo "::error::Unsafe route was accepted: $bad"
+              exit 1
+            fi
+          done
+          echo "HOSTED_ROUTE_NEGATIVE_WITNESSES_GREEN"
+          echo "::notice::CUDA is UNVERIFIED unless a real GPU job executes."
