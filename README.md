@@ -33,6 +33,15 @@ execution evidence. OpenCL loader на WSL2 наявний, але OpenCL platfo
 **відсутня** (`clGetPlatformIDs … -1001`), тому OpenCL не заявляється
 робочим backend-ом. CPU self-comparison або synthetic fixture не є GPU parity.
 
+## Чинна політика GitHub Actions
+
+Автоматичні jobs мають використовувати лише **GitHub-hosted runners**.
+Захист `hosted-runner-routing-policy.yml` перевіряє маршрут і відхиляє
+`self-hosted` або непідтверджені `runs-on`. Історичні результати на
+локальній GTX 1050 Ti збережені як архівні свідчення, але не є
+підтвердженням GPU-доступності GitHub. Зелений структурний CI ≠ CUDA PASS;
+пропущена апаратна перевірка має статус `UNVERIFIED`.
+
 ## Import і witness
 
 Локальний CSV не є канонічним джерелом. `sens-futhark` приймає лише
