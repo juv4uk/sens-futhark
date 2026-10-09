@@ -3,8 +3,14 @@
 SENS_REPOSITORY=https://github.com/juv4uk/sens.git
 SENS_COMMIT=5964c4dd2378364a5307b143a65438f8609fecd6
 SENS_CONTRACT=11.6
+# Release-alignment target: juv4uk/sens l0.42.0 freezes Contract 11.8 (D1-D9 ratified, D10 research-only).
+# SENS_CONTRACT above intentionally LAGS the target until the l0.42.0 tag is cut; bump both together then.
+SENS_RELEASE_TARGET=l0.42.0
+SENS_RELEASE_CONTRACT=11.8
 # Expected local checkout path for release entrypoint (#39)
 SENS_CHECKOUT_PATH=vendor/sens
 # Update procedure: bump SENS_COMMIT only after upstream release decision; never silent float.
 # Updated after sens#3836: canonical compiler-compilation-artifact/1.
 # Contract remains 11.6; semantic authority remains the upstream language contract.
+# Pending: after the l0.42.0 tag, bump SENS_COMMIT to the frozen exact SHA and set SENS_CONTRACT
+# to the released contract; tracked in the follow-up pin-bump issue.
