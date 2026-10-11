@@ -1,0 +1,47 @@
+name: Release evidence fail-closed guard
+
+on:
+  pull_request:
+    paths:
+      - "tools/release_evidence.py"
+      - "tools/release-evidence.sh"
+      - "tests/test_release_evidence_guard.py"
+      - ".github/workflows/release-evidence-guard.yml"
+  push:
+    branches: [main]
+    paths:
+      - "tools/release_evidence.py"
+      - "tools/release-evidence.sh"
+      - "tests/test_release_evidence_guard.py"
+      - ".github/workflows/release-evidence-guard.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    name: Reject green-without-CUDA evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert GitHub-hosted runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_ENVIRONMENT:-}" = github-hosted
+      - name: Run independent positive and negative evidence witnesses
+        run: python3 -m unittest discover -s tests -p test_release_evidence_guard.py -v
+      - name: Missing authenticated GitHub proof must never issue a release
+        shell: bash
+        env:
+          RELEASE_SHA: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          RELEASE_RUN_URL: https://github.com/juv4uk/sens-futhark/actions/runs/0
+        run: |
+          set -euo pipefail
+          if bash tools/release-evidence.sh > /tmp/manifest.txt 2> /tmp/guard.err; then
+            echo "::error::Unverifiable release evidence was accepted"
+            exit 1
+          fi
+          grep -F "FAIL-CLOSED" /tmp/guard.err
