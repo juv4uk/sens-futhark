@@ -1,76 +1,60 @@
 #!/usr/bin/env bash
-# check-gpu-single-lane.sh — enforce the single-GPU-lane invariant (#82).
+# Hosted-only runner route guard (historical filename retained for references).
 #
-# One physical card => one scheduler (juv4uk/cml#472). Inside this repo that means:
-#   * at most ONE workflow file may claim a GPU lane;
-#   * that workflow must target the canonical self-hosted GPU runner,
-#     never a hosted runner (no silent fallback).
-#
-# A workflow "claims a GPU lane" if it does CUDA work (cuda-env.sh, --backend=cuda,
-# smoke-cuda, *-cuda targets, nvidia-smi) OR targets GPU runner labels. Detecting by
-# work — not only by labels — is what catches a GPU workflow silently pointed at a
-# hosted runner.
-#
-# Fail-closed: any violation exits non-zero. It never invents a pass.
+# SENS-Futhark must never dispatch GitHub Actions onto the owner's computer.
+# The former "single self-hosted GPU lane" rule was retired. This checker
+# statically validates runner selection; it does NOT prove CUDA execution.
+# A skipped or blocked CUDA job is UNVERIFIED, never a GPU PASS.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-WF_DIR="$ROOT/.github/workflows"
-
-GPU_LABEL_RE='(gpu|cuda-[0-9]|gtx-|nvidia-)'
-GPU_WORK_RE='(cuda-env\.sh|--backend=cuda|smoke-cuda|probe-cuda|nvidia-smi|test-[a-z0-9-]*-cuda|futhark[[:space:]]+cuda)'
-
-if [[ ! -d "$WF_DIR" ]]; then
-  echo "check-gpu-single-lane: no $WF_DIR; nothing to check"
-  exit 0
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$SCRIPT_DIR/.."
+if [[ $# -ge 1 ]]; then
+  ROOT="$1"
 fi
 
-gpu_files=()
-for f in "$WF_DIR"/*.yml "$WF_DIR"/*.yaml; do
-  [[ -e "$f" ]] || continue
-  label_hit=0
-  grep -E '^[[:space:]]*runs-on:' "$f" | grep -Eq "$GPU_LABEL_RE" && label_hit=1
-  work_hit=0
-  grep -Eq "$GPU_WORK_RE" "$f" && work_hit=1
-  if (( label_hit || work_hit )); then
-    gpu_files+=("$(basename "$f")")
-  fi
-done
+python3 - "$ROOT" <<'PY'
+from pathlib import Path
+import re
+import sys
 
-if (( ${#gpu_files[@]} == 0 )); then
-  echo "check-gpu-single-lane: OK — no GPU lane claimed (0 workflows)"
-  exit 0
-fi
+root = Path(sys.argv[1])
+workflow_dir = root / ".github" / "workflows"
+files = sorted([*workflow_dir.glob("*.yml"), *workflow_dir.glob("*.yaml")])
+if not files:
+    print("HOSTED_ROUTING_FAIL: no workflow files to audit", file=sys.stderr)
+    sys.exit(2)
 
-if (( ${#gpu_files[@]} > 1 )); then
-  {
-    echo "check-gpu-single-lane: FAIL-CLOSED — ${#gpu_files[@]} workflows claim a GPU lane:"
-    printf '  - %s\n' "${gpu_files[@]}"
-    echo "One physical card => one scheduler (cml#472). Collapse to a single GPU workflow."
-  } >&2
-  exit 2
-fi
+# Only standard GitHub-owned images that have been explicitly reviewed.
+# Future organization-managed GitHub-hosted GPU labels need a separate,
+# positively evidenced admission change. Never insert a custom local label.
+allowed = {"ubuntu-24.04"}
+violations = []
+routes = 0
 
-wf="$WF_DIR/${gpu_files[0]}"
-runs_on="$(grep -E '^[[:space:]]*runs-on:' "$wf" || true)"
+for path in files:
+    for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        match = re.match(r"^\s*runs-on\s*:\s*(.*?)\s*$", line)
+        if match is None:
+            continue
+        routes += 1
+        candidate = match.group(1).split("#", 1)[0].strip().strip("'\"")
+        if candidate not in allowed:
+            violations.append(
+                f"{path.relative_to(root)}:{line_no}: forbidden/unknown runs-on={candidate!r}"
+            )
 
-bad=0
-if ! grep -q 'self-hosted' <<<"$runs_on"; then
-  echo "check-gpu-single-lane: FAIL-CLOSED — ${gpu_files[0]} claims a GPU lane but is not self-hosted" >&2
-  bad=1
-fi
-if ! grep -Eq "$GPU_LABEL_RE" <<<"$runs_on"; then
-  echo "check-gpu-single-lane: FAIL-CLOSED — ${gpu_files[0]} claims a GPU lane but its runs-on has no GPU label" >&2
-  bad=1
-fi
-if grep -Eq 'ubuntu-|windows-|macos-' <<<"$runs_on"; then
-  echo "check-gpu-single-lane: FAIL-CLOSED — ${gpu_files[0]} GPU lane targets a hosted runner (silent-fallback risk)" >&2
-  bad=1
-fi
+if routes == 0:
+    violations.append("No runs-on declarations found; unable to prove routing")
 
-if (( bad )); then
-  exit 2
-fi
+if violations:
+    for item in violations:
+        print(f"HOSTED_ROUTING_FAIL: {item}", file=sys.stderr)
+    sys.exit(2)
 
-echo "check-gpu-single-lane: OK — single GPU lane in ${gpu_files[0]} (self-hosted, canonical)"
-exit 0
+print(
+    f"HOSTED_ROUTING_GREEN: {routes} explicit GitHub-owned Ubuntu runner routes "
+    f"in {len(files)} workflow(s)"
+)
+print("CUDA/FPGA execution evidence: UNVERIFIED unless a real hardware job passes")
+PY

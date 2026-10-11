@@ -63,76 +63,18 @@ A CUDA execution path calls `cuda_env_require` and fails closed when `cuda.h`, t
 
 The ordinary `make probe` remains diagnostic and also prints the capability JSON; it does not turn a missing GPU into semantic success.
 
-## Local GPU runner
+## GitHub-hosted runner policy (current)
 
-Current repository-scoped runner:
+GitHub Actions now targets **GitHub-hosted** machines exclusively. The policy
+workflow validates `RUNNER_ENVIRONMENT=github-hosted` and the routing
+checker permits only explicitly reviewed runner images. The old repository
+`self-hosted` runner registration, its WSL service, GTX 1050 Ti and CML
+single-device queue are **historical/local tooling**, not a valid CI target.
 
-- name: `wsm-gpu-sens-futhark`;
-- generic capability labels: `self-hosted, Linux, X64, gpu, gtx-1050-ti, cuda-12.6`;
-- repository routing label: `sens-futhark`;
-- GPU: NVIDIA GeForce GTX 1050 Ti;
-- CUDA toolkit: 12.6;
-- WSL2 GPU device on the current host: `/dev/dxg`.
-
-The generic labels describe host capability. `sens-futhark` is only a routing label and is not the CUDA contract.
-
-Multiple runner processes do **not** imply multiple GPUs. Cross-repository arbitration for the one physical GPU belongs to the shared execution lane (`juv4uk/cml#472`), not to this repository.
-
-### Managed listener lifecycle
-
-Issue #69 replaces the historical manual listener process with a user-systemd unit:
-
-```text
-systemd/actions-runner-sens-futhark.service
-```
-
-The unit manages the **already registered** runner under:
-
-```text
-~/gpu-runners/sens-futhark
-```
-
-It does not register a new runner and stores no GitHub token or registration secret.
-
-Install only after the old manual listener is no longer running:
-
-```bash
-bash tools/runner-service.sh status
-bash tools/runner-service.sh install
-```
-
-The helper deliberately refuses installation/restart with
-`REFUSE_DUPLICATE_LISTENER` if `.manual-runner.pid` still identifies a live
-process. Stop only that old listener gracefully, then rerun `install`. Do
-**not** restart or terminate the whole WSL distribution for this migration.
-
-Routine recovery starts with the non-destructive doctor:
-
-```bash
-bash tools/runner-service.sh doctor
-```
-
-The doctor returns an explicit state and next action:
-
-- `0`: managed listener is active;
-- `3`: the old manual listener is still live; stop only that listener gracefully before installing the service;
-- `4`: user-systemd or a live listener is unavailable; follow the printed `NEXT=` action;
-- `5`: both manual and managed listeners appear live; resolve the duplicate before running jobs.
-
-It also validates that a stale PID file still points to an actual Actions runner process, so PID reuse cannot permanently block migration.
-
-Routine inspection/recovery remains:
-
-```bash
-bash tools/runner-service.sh status
-bash tools/runner-service.sh restart
-bash tools/runner-service.sh logs 100
-```
-
-The status command reports managed service state, stale/live manual PID state,
-registration identity fields, and the tail of the newest runner diagnostic log.
-A broker/listener failure is therefore repaired at the listener boundary while
-other agents and services in WSL remain untouched.
+Standard `ubuntu-24.04` is a CPU host; a skipped CUDA job is
+`UNVERIFIED`, not successful CUDA parity. A genuine GitHub-hosted GPU runner
+needs separate provisioning and device evidence before any claim of a CUDA
+benchmark. See `docs/gpu-scheduler-invariant.uk.md`.
 
 ## Bootstrap
 
@@ -146,9 +88,9 @@ make smoke-cuda
 
 ## Current backend evidence
 
-### CUDA — working
+### CUDA — historical local witness (not current hosted CI proof)
 
-The self-hosted GitHub Actions run compiled and executed `src/smoke.fut` with Futhark's CUDA backend on the GTX 1050 Ti.
+A historical self-hosted GitHub Actions run compiled and executed `src/smoke.fut` with Futhark's CUDA backend on the GTX 1050 Ti.
 
 The host profile resolves the current WSL2 installation to:
 
@@ -207,6 +149,8 @@ CPU-hosted runner / compiler / coordination
 
 The GitHub runner itself still executes as a host process. Only explicitly admitted kernels or backend work execute on the GPU.
 
-## CI note
+## CI note (current)
 
-GitHub-hosted `ubuntu-latest` jobs are currently blocked by account billing/spending state before execution. The syntax check therefore uses the repository-scoped self-hosted runner.
+The GitHub-hosted route checker executes on `ubuntu-24.04`. Its success does
+not attest to CUDA device availability. A hosted CUDA hardware witness must
+be recorded separately; no local runner fallback is permitted.
